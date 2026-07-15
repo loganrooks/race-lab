@@ -31,8 +31,8 @@ jobs:
           from pathlib import Path
           path = Path('/tmp/apply_spa_pr1_closeout.py')
           text = path.read_text()
-          old = '    replace_once(MODEL, insert_marker, control_block + insert_marker)\n'
-          new = (
+          old_lap = '    replace_once(MODEL, insert_marker, control_block + insert_marker)\n'
+          new_lap = (
               '    model_text = MODEL.read_text(encoding="utf-8")\n'
               '    first_marker = model_text.find(insert_marker)\n'
               '    second_marker = model_text.find(insert_marker, first_marker + len(insert_marker))\n'
@@ -40,11 +40,20 @@ jobs:
               '        raise RuntimeError(f"{MODEL}: expected at least two LapSolution markers")\n'
               '    MODEL.write_text(model_text[:second_marker] + control_block + model_text[second_marker:], encoding="utf-8")\n'
           )
-          if text.count(old) != 1:
-              raise SystemExit(f'LapSolution patch target count={text.count(old)}')
-          path.write_text(text.replace(old, new))
+          old_norm = '    replace_once(APP, old_norm, new_norm)\n'
+          new_norm = (
+              '    app_text = APP.read_text(encoding="utf-8")\n'
+              '    indented_old_norm = "\\n".join("      " + line for line in old_norm.splitlines())\n'
+              '    indented_new_norm = "\\n".join("      " + line for line in new_norm.splitlines())\n'
+              '    if app_text.count(indented_old_norm) != 1:\n'
+              '        raise RuntimeError(f"{APP}: expected one indented legacy normalization block")\n'
+              '    APP.write_text(app_text.replace(indented_old_norm, indented_new_norm), encoding="utf-8")\n'
+          )
+          if text.count(old_lap) != 1 or text.count(old_norm) != 1:
+              raise SystemExit(f'patch targets lap={text.count(old_lap)} norm={text.count(old_norm)}')
+          path.write_text(text.replace(old_lap, new_lap).replace(old_norm, new_norm))
           PY
-          echo '043402e56ad43c4f3fbb2e08e12561f1fd3b7abb08bf6f86c8071207aa89a2fb  /tmp/apply_spa_pr1_closeout.py' | sha256sum -c -
+          echo '7d6220a5549f2e4b7140a766cd42811a90a744a9eb36dba99654287fbb28532f  /tmp/apply_spa_pr1_closeout.py' | sha256sum -c -
           python -m py_compile /tmp/apply_spa_pr1_closeout.py
       - name: Apply bounded reconciliation
         run: |
