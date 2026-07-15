@@ -1,0 +1,49 @@
+name: Apply Spa plan reconciliation
+
+on:
+  push:
+    branches:
+      - automation/spa-plan-reconciliation-staging
+    paths:
+      - .plan-reconcile-payload/READY
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out staging payload
+        uses: actions/checkout@v6
+        with:
+          ref: automation/spa-plan-reconciliation-staging
+          fetch-depth: 0
+
+      - name: Reconstruct reconciled files
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          cat .plan-reconcile-payload/chunk-* | base64 --decode > /tmp/reconciliation-payload.tgz
+          tar -xzf /tmp/reconciliation-payload.tgz
+          chmod +x scripts/verify.sh
+          rm -rf .plan-reconcile-payload
+          rm -f .github/workflows/apply-spa-plan-reconciliation.yml
+
+      - name: Run canonical verification
+        shell: bash
+        run: bash scripts/verify.sh
+
+      - name: Create one squashed commit
+        shell: bash
+        env:
+          BASE_SHA: 0f6778b1c913e6648f18f80bae8a7fb74da9a848
+        run: |
+          set -Eeuo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          tree_sha="$(git write-tree)"
+          commit_sha="$(printf '%s\n' 'docs: reconcile Spa 2026 calibration plans' | git commit-tree "$tree_sha" -p "$BASE_SHA")"
+          git push --force origin "$commit_sha:refs/heads/automation/spa-plan-reconciliation-final"
+          printf '%s\n' "$commit_sha" > /tmp/final-commit-sha
