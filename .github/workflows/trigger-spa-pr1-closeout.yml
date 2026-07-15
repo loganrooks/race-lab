@@ -29,7 +29,21 @@ jobs:
           echo 'ef10e0521035bd198e7fe006afa0f9a44240046a2db486a1a103d40097f2807f  /tmp/apply_spa_pr1_closeout.py' | sha256sum -c -
           python -m py_compile /tmp/apply_spa_pr1_closeout.py
       - name: Apply bounded reconciliation
-        run: python /tmp/apply_spa_pr1_closeout.py
+        run: |
+          set +e
+          python /tmp/apply_spa_pr1_closeout.py > /tmp/spa-closeout-apply.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/spa-closeout-apply.log
+          if [[ $status -ne 0 ]]; then
+            cp /tmp/spa-closeout-apply.log .github/spa-closeout/diagnostic.txt
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add .github/spa-closeout/diagnostic.txt
+            git commit -m 'chore: record Spa closeout diagnostic' || true
+            git push origin HEAD:${{ github.head_ref }}
+            exit $status
+          fi
       - name: Verify corrected package
         run: bash scripts/verify.sh
       - name: Finalize records
