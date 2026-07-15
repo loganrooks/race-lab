@@ -11,8 +11,18 @@ PAYLOAD = ROOT / ".automation"
 PLAN_ROOT = ROOT / "circuits/spa-francorchamps/seasons/2026"
 
 
+def read_encoded(name: str) -> str:
+    direct = PAYLOAD / name
+    if direct.exists():
+        return direct.read_text().strip()
+    chunks = sorted(PAYLOAD.glob(f"{name}.part-*"))
+    if not chunks:
+        raise FileNotFoundError(name)
+    return "".join(chunk.read_text().strip() for chunk in chunks)
+
+
 def decode(name: str) -> bytes:
-    return gzip.decompress(base64.b64decode((PAYLOAD / name).read_text().strip()))
+    return gzip.decompress(base64.b64decode(read_encoded(name)))
 
 
 def run(*args: str) -> None:
