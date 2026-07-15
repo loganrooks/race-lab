@@ -1,6 +1,12 @@
 name: Apply Spa plan reconciliation
 
 on:
+  pull_request:
+    branches:
+      - automation/spa-plan-reconciliation-staging
+    types:
+      - opened
+      - synchronize
   push:
     branches:
       - automation/spa-plan-reconciliation-staging
@@ -25,6 +31,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           cat .plan-reconcile-payload/chunk-* | base64 --decode > /tmp/reconciliation-payload.tgz
+          printf '%s  %s\n' 'fcb54943d376677696566ce3e3b83d660a7502ae346e6ed5b0901046db6992c4' /tmp/reconciliation-payload.tgz | sha256sum --check --strict
           tar -xzf /tmp/reconciliation-payload.tgz
           chmod +x scripts/verify.sh
           rm -rf .plan-reconcile-payload
@@ -46,4 +53,3 @@ jobs:
           tree_sha="$(git write-tree)"
           commit_sha="$(printf '%s\n' 'docs: reconcile Spa 2026 calibration plans' | git commit-tree "$tree_sha" -p "$BASE_SHA")"
           git push --force origin "$commit_sha:refs/heads/automation/spa-plan-reconciliation-final"
-          printf '%s\n' "$commit_sha" > /tmp/final-commit-sha
