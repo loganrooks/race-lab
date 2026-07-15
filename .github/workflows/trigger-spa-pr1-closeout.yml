@@ -1,0 +1,49 @@
+name: Trigger Spa PR1 closeout
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    if: github.head_ref == 'automation/spa-pr1-closeout-20260715'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install verification tools
+        run: python -m pip install --disable-pip-version-check pytest ruff
+      - name: Extract reconciliation payload
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('.github/workflows/apply-spa-pr1-closeout.yml').read_text()
+          payload = text.split("cat > /tmp/apply-spa.b64 <<'EOF'\n", 1)[1].split('\nEOF\n', 1)[0]
+          Path('/tmp/apply-spa.b64').write_text(payload + '\n')
+          PY
+          base64 -d /tmp/apply-spa.b64 | gzip -d > /tmp/apply_spa_pr1_closeout.py
+          python -m py_compile /tmp/apply_spa_pr1_closeout.py
+      - name: Apply bounded reconciliation
+        run: python /tmp/apply_spa_pr1_closeout.py
+      - name: Verify corrected package
+        run: bash scripts/verify.sh
+      - name: Finalize records
+        run: python /tmp/apply_spa_pr1_closeout.py --finalize
+      - name: Verify finalized package
+        run: bash scripts/verify.sh
+      - name: Commit corrected publication unit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/apply-spa-pr1-closeout.yml .github/workflows/trigger-spa-pr1-closeout.yml
+          git add -A
+          git commit -m 'docs: close Spa post-reconciliation review gaps'
+          git push origin HEAD:${{ github.head_ref }}
