@@ -1,0 +1,40 @@
+name: Reconcile Spa calibration plans
+
+on:
+  push:
+    branches:
+      - automation/spa-plan-reconciliation-20260715
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install verification tooling
+        run: python -m pip install --disable-pip-version-check ruff
+      - name: Apply reconciliation package
+        run: python scripts/reconcile_spa_plans.py
+      - name: Run canonical verification
+        run: bash scripts/verify.sh
+      - name: Commit consolidated revision
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add \
+            circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-program.md \
+            circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md \
+            circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md \
+            circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-app-integration.md \
+            circuits/spa-francorchamps/seasons/2026/reviews/2026-07-15-plan-reconciliation.md \
+            scripts/verify.sh
+          git commit -m "docs: reconcile Spa calibration plans"
+          git push
