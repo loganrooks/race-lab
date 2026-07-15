@@ -22,6 +22,12 @@ required = [
     root / "plans/2026-07-14-spa-calibration-data-pipeline.md",
     root / "plans/2026-07-14-spa-calibration-model-prediction.md",
     root / "plans/2026-07-14-spa-calibration-app-integration.md",
+    root / "plans/2026-07-15-pr1-closeout-plan.md",
+    root / "project/README.md",
+    root / "project/STATUS.md",
+    root / "project/ACTIVITY.md",
+    root / "project/DECISIONS.md",
+    root / "project/LESSONS.md",
 ]
 missing = [str(path) for path in required if not path.is_file()]
 if missing:
@@ -37,6 +43,9 @@ if stale:
     raise SystemExit("stale moved plan references:\n" + "\n".join(stale))
 print(f"validated {len(required)} canonical files and {len(plans)} plan path(s)")
 PY
+
+echo "== Project-control records =="
+python3 scripts/verify_project_control.py
 
 echo "== Shell syntax =="
 shell_files=()
@@ -75,7 +84,11 @@ python_files=()
 while IFS= read -r -d '' file; do
   python_files+=("$file")
 done < <(git ls-files -z '*.py')
+while IFS= read -r -d '' file; do
+  python_files+=("$file")
+done < <(git ls-files -z --others --exclude-standard '*.py')
 if ((${#python_files[@]})); then
+  mapfile -t python_files < <(printf '%s\n' "${python_files[@]}" | sort -u)
   pycache_dir="$(mktemp -d)"
   PYTHONPYCACHEPREFIX="$pycache_dir" python3 -m compileall -q "${python_files[@]}"
   rm -rf "$pycache_dir"
@@ -107,6 +120,9 @@ if ((${#python_files[@]})); then
       while IFS= read -r file; do
         [[ -f "$file" ]] && lint_targets+=("$file")
       done < <(git diff --name-only --diff-filter=ACMR HEAD -- '*.py')
+      while IFS= read -r file; do
+        [[ -f "$file" ]] && lint_targets+=("$file")
+      done < <(git ls-files --others --exclude-standard '*.py')
 
       if ((${#lint_targets[@]})); then
         mapfile -t lint_targets < <(printf '%s\n' "${lint_targets[@]}" | sort -u)
@@ -122,6 +138,8 @@ if ((${#python_files[@]})); then
 
   if command -v pytest >/dev/null 2>&1 && [[ -d tests ]]; then
     pytest -q
+  else
+    python3 -m unittest discover -s tests -p 'test_*.py' -v
   fi
 fi
 
