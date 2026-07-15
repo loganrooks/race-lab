@@ -32,14 +32,14 @@ jobs:
           path = Path('/tmp/apply_spa_pr1_closeout.py')
           text = path.read_text()
           old = '    replace_once(MODEL, insert_marker, control_block + insert_marker)\n'
-          new = '''    model_text = MODEL.read_text(encoding="utf-8")
-              first_marker = model_text.find(insert_marker)
-              second_marker = model_text.find(insert_marker, first_marker + len(insert_marker))
-              if first_marker < 0 or second_marker < 0:
-                  raise RuntimeError(f"{MODEL}: expected at least two LapSolution markers")
-              MODEL.write_text(model_text[:second_marker] + control_block + model_text[second_marker:], encoding="utf-8")
-          '''
-          new = '\n'.join(line[12:] if line.startswith('            ') else line for line in new.splitlines()) + '\n'
+          new = (
+              '    model_text = MODEL.read_text(encoding="utf-8")\n'
+              '    first_marker = model_text.find(insert_marker)\n'
+              '    second_marker = model_text.find(insert_marker, first_marker + len(insert_marker))\n'
+              '    if first_marker < 0 or second_marker < 0:\n'
+              '        raise RuntimeError(f"{MODEL}: expected at least two LapSolution markers")\n'
+              '    MODEL.write_text(model_text[:second_marker] + control_block + model_text[second_marker:], encoding="utf-8")\n'
+          )
           if text.count(old) != 1:
               raise SystemExit(f'LapSolution patch target count={text.count(old)}')
           path.write_text(text.replace(old, new))
