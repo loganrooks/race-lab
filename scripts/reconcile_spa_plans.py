@@ -46,7 +46,7 @@ required = {
     PLAN_ROOT / "plans/2026-07-14-spa-calibration-program.md": [
         "spa-2026-dry-qualifying-reference/v1",
         "rolling-origin",
-        "correction ownership ledger",
+        "correction ledger",
     ],
     PLAN_ROOT / "plans/2026-07-14-spa-calibration-data-pipeline.md": [
         "CircuitYearEligibility",
