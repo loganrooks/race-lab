@@ -4,7 +4,7 @@
 
 **Goal:** Learn a backtested 2025→2026 phase-level performance correction, compose it with a minimum-time vehicle prior, and emit a gated Spa 2026 prediction with coherent team distributions and honest uncertainty.
 
-**Architecture:** Separate baseline, statistical calibration, physics prior, validation, and prediction modules. A set of partially pooled Student-t outcome models estimates phase-level residual changes from continuous geometry, phase, team, driver, circuit, and season-regime effects. Leave-one-circuit-out validation compares the hierarchy against whole-circuit and archetype baselines. Spa prediction applies posterior corrections to team-specific vehicle priors, iterates line/control optimization, samples coherent laps, and serializes a checksum-protected browser artifact only when release gates pass.
+**Architecture:** Separate baseline, statistical calibration, physics prior, validation, and prediction modules. Partially pooled Student-t marginal outcome models plus an explicitly estimated cross-outcome residual copula estimate phase-level residual changes from continuous geometry, phase, team, driver, circuit, and season-regime effects. Leave-one-circuit-out and rolling-origin validation compare the hierarchy against the complete required baseline suite. Spa prediction applies posterior corrections to team-specific vehicle priors, iterates line/control optimization, samples coherent laps, and serializes a checksum-protected browser artifact only when release gates pass.
 
 **Tech Stack:** Python 3.11+, NumPy, pandas, SciPy, scikit-learn, PyMC 5, ArviZ, Pydantic, PyArrow, pytest.
 
@@ -18,6 +18,29 @@
 - The artifact is `released` only when all declared gates pass; otherwise it is `failed-validation` or `pending` and contains no field-best central estimate.
 - Fix every random seed in configuration and record it in the artifact.
 - Never claim exact battery state, electrical power, downforce, drag, or active-aero command as observed.
+
+
+## Mandatory Review Resolutions
+
+### Estimand and scenario
+
+All training, validation, artifacts, and UI labels target the best of two representative clean dry push attempts for one coherent supported car-driver profile under `spa-2026-dry-qualifying-reference/v1`. The field-best draw is the minimum across complete profile draws while preserving common weather, regulation, tyre, and circuit uncertainty. No actual-session pole claim is made.
+
+### Validation release contract
+
+Leave-one-circuit-out and rolling-origin validation are both mandatory. Each score is first computed per `lap_slug`/profile, then aggregated across laps; phases from different laps are never summed into one synthetic lap. Point accuracy, empirical 80/95 coverage, weighted interval score, CRPS, calibration by archetype/speed regime, baseline improvement, identifiability, physical feasibility, convergence, and provenance all participate in `release_gates.passed`.
+
+### Joint uncertainty
+
+The outcome vector is modeled jointly, or marginal models are coupled by an explicitly estimated residual/posterior copula with verified cross-outcome covariance. Reusing unrelated marginal draw indices is prohibited. Common season/regulation/circuit/condition draws are shared across profiles; team/driver/residual draws remain profile-specific.
+
+### Empirical-to-physics ownership
+
+Each correction draw contains one application ledger. Effective friction/aero/drive/brake envelopes enter bounded physical parameters. Braking-onset and throttle-pickup effects enter control-landmark constraints. Exit-speed effects enter downstream boundary/objective constraints. Phase-time residuals are diagnostics only in the first released model and cannot be added after the coupled solve. Minimum-speed effects may either parameterize the envelope or constrain speed, never both. The solver must consume every release outcome or the unused outcome is removed from the release model.
+
+### Baselines and identifiability
+
+Required competitors are: unchanged 2025 Spa; global whole-lap scaling; sector scaling; physics-only; pooled empirical; simple mixed effects; nearest-analogue/continuous regression; and the full model. Required ablations cover continuous features, archetypes, team, driver, conditions, regime, physics, re-optimization, and 2024 controls. Unsupported team/driver/archetype effects are pooled or omitted according to ESS, prior sensitivity, resample stability, interval usefulness, and held-out contribution.
 
 ---
 
@@ -67,7 +90,7 @@ OUTCOMES = (
     "delta_phase_time_s",
     "delta_minimum_speed_kph",
     "delta_exit_speed_100m_kph",
-    "delta_braking_onset_m",
+    "delta_braking_onset_from_complex_start_m",
     "delta_full_throttle_fraction",
 )
 
@@ -75,6 +98,9 @@ OUTCOMES = (
 class CalibrationFit:
     model_version: str
     outcomes: dict[str, az.InferenceData]
+    outcome_names: tuple[str, ...]
+    cross_outcome_covariance: np.ndarray
+    copula_version: str
     encoder: FeatureEncoder
     training_manifest_checksum: str
     random_seed: int
@@ -198,7 +224,14 @@ minimum_speed_mae_kph: 8.0
 braking_onset_mae_m: 25.0
 maximum_signed_archetype_bias_s: 0.15
 minimum_interval_coverage_80: 0.70
+maximum_interval_coverage_80: 0.90
+minimum_interval_coverage_95: 0.86
+maximum_weighted_interval_score: 1.00
+maximum_crps_s: 0.45
 requires_baseline_improvement: true
+requires_rolling_origin: true
+requires_physical_feasibility: true
+requires_identifiability: true
 ```
 
 - [ ] **Step 4: Verify GREEN**
@@ -219,6 +252,14 @@ git commit -m "feat(calibration-model): add held-out baselines"
 
 ---
 
+
+### Task 1A: Implement the complete baseline, ablation, and identifiability suite
+
+**Files:** `calibration/src/spa_calibration/baselines.py`, `ablation.py`, `identifiability.py`; corresponding tests and reports.
+
+The release comparison includes unchanged 2025 Spa, global lap scaling, sector scaling, physics-only, pooled empirical, simple mixed-effects, nearest-analogue regression, and full coupled hierarchy. Ablations remove each major effect one at a time. `IdentifiabilityDecision` records ESS, shrinkage, prior sensitivity, resample stability, held-out contribution, interval width, and disposition `supported | pooled | omitted`. A full model is ineligible unless it improves proper score and point accuracy over the best eligible simpler model by the configured practical margin.
+
+---
 ### Task 2: Build a stable encoded design matrix
 
 **Files:**
@@ -365,7 +406,7 @@ outcomes:
   - delta_phase_time_s
   - delta_minimum_speed_kph
   - delta_exit_speed_100m_kph
-  - delta_braking_onset_m
+  - delta_braking_onset_from_complex_start_m
   - delta_full_throttle_fraction
 student_t_nu_prior_rate: 0.10
 ```
@@ -434,6 +475,10 @@ python -m pytest tests/test_hierarchical_recovery.py -q
 ```
 
 Expected: missing module.
+
+- [ ] **Step 2A: Estimate cross-outcome dependence**
+
+After fitting the marginal outcome models, compute leave-one-lap-out standardized residual vectors in the fixed `OUTCOMES` order. Estimate a shrinkage covariance/correlation matrix, verify positive definiteness, and store it with the fit. `sample_covariance_coupled_outcome_draws()` draws correlated latent ranks from this copula and maps each rank to the corresponding marginal posterior predictive distribution. Tests must recover known positive and negative covariance and fail if independent indices are substituted.
 
 - [ ] **Step 3: Implement the Student-t hierarchical model**
 
@@ -596,6 +641,9 @@ from .design_matrix import FeatureEncoder
 class CalibrationFit:
     model_version: str
     outcomes: dict[str, az.InferenceData]
+    outcome_names: tuple[str, ...]
+    cross_outcome_covariance: np.ndarray
+    copula_version: str
     encoder: FeatureEncoder
     training_manifest_checksum: str
     random_seed: int
@@ -608,11 +656,13 @@ def save_fit(fit: CalibrationFit, directory: Path) -> None:
         "encoder": fit.encoder.to_dict(),
         "trainingManifestChecksum": fit.training_manifest_checksum,
         "randomSeed": fit.random_seed,
-        "outcomes": sorted(fit.outcomes),
+        "outcomes": list(fit.outcome_names),
+        "copulaVersion": fit.copula_version,
+        "crossOutcomeCovariance": fit.cross_outcome_covariance.tolist(),
     }
     (directory / "model-summary.json").write_bytes(orjson.dumps(metadata, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2))
-    for outcome, inference in fit.outcomes.items():
-        inference.to_netcdf(directory / f"{outcome}.nc")
+    for outcome in fit.outcome_names:
+        fit.outcomes[outcome].to_netcdf(directory / f"{outcome}.nc")
 
 
 def load_fit(directory: Path) -> CalibrationFit:
@@ -622,13 +672,13 @@ def load_fit(directory: Path) -> CalibrationFit:
         scales={key: float(value) for key, value in metadata["encoder"]["scales"].items()},
         categories={key: tuple(value) for key, value in metadata["encoder"]["categories"].items()},
     )
-    outcomes = {outcome: az.from_netcdf(directory / f"{outcome}.nc") for outcome in metadata["outcomes"]}
+    outcome_names = tuple(metadata["outcomes"])
+    outcomes = {outcome: az.from_netcdf(directory / f"{outcome}.nc") for outcome in outcome_names}
     return CalibrationFit(
-        model_version=metadata["modelVersion"],
-        outcomes=outcomes,
-        encoder=encoder,
-        training_manifest_checksum=metadata["trainingManifestChecksum"],
-        random_seed=int(metadata["randomSeed"]),
+        model_version=metadata["modelVersion"], outcomes=outcomes, outcome_names=outcome_names,
+        cross_outcome_covariance=np.asarray(metadata["crossOutcomeCovariance"], dtype=float),
+        copula_version=metadata["copulaVersion"], encoder=encoder,
+        training_manifest_checksum=metadata["trainingManifestChecksum"], random_seed=int(metadata["randomSeed"]),
     )
 ```
 
@@ -837,35 +887,44 @@ def _derive_controls(speed: np.ndarray, distance: np.ndarray) -> tuple[np.ndarra
 
 
 def _integrate_battery(
-    dt: np.ndarray,
-    deploy_kw: np.ndarray,
-    regen_kw: np.ndarray,
-    parameters: VehicleParameters,
-) -> np.ndarray:
+    dt: np.ndarray, deploy_kw: np.ndarray, regen_kw: np.ndarray, parameters: VehicleParameters,
+) -> tuple[np.ndarray, np.ndarray]:
     battery = np.empty(len(dt))
+    feasible_deploy = deploy_kw.copy()
     battery[0] = parameters.initial_battery_kj
     for index in range(1, len(dt)):
-        battery[index] = np.clip(
-            battery[index - 1] + (regen_kw[index] - deploy_kw[index]) * dt[index],
-            parameters.battery_reserve_kj,
+        available_power_kw = max(0.0, (battery[index - 1] - parameters.battery_reserve_kj) / max(dt[index], 1e-9) + regen_kw[index])
+        feasible_deploy[index] = min(feasible_deploy[index], available_power_kw)
+        battery[index] = min(
             parameters.energy_window_kj,
+            battery[index - 1] + (regen_kw[index] - feasible_deploy[index]) * dt[index],
         )
-    return battery
+        if battery[index] < parameters.battery_reserve_kj - 1e-6:
+            raise PhysicalFeasibilityError("ERS reserve violated")
+    return battery, feasible_deploy
 
 
 def simulate_lap(line: pd.DataFrame, parameters: VehicleParameters, corrections: pd.DataFrame | None = None) -> LapSolution:
     frame = line.sort_values("distance_m").reset_index(drop=True).copy()
     distance = frame.distance_m.to_numpy(float)
     lateral_limit = _lateral_speed_limit(frame, parameters)
-    if corrections is not None and "speed_correction_ms" in corrections:
-        correction = np.interp(distance, corrections.distance_m, corrections.speed_correction_ms)
-        lateral_limit = np.maximum(10, lateral_limit + correction)
+    if corrections is not None:
+        ledger = validate_correction_ledger(corrections)
+        if ledger.owns("effective_envelope"):
+            lateral_limit = apply_effective_envelope_draw(frame, parameters, corrections, lateral_limit)
+        control_constraints = build_control_landmark_constraints(
+            frame, braking_onset_m=corrections.braking_onset_correction_m,
+            throttle_pickup_fraction=corrections.full_throttle_fraction_correction,
+            exit_speed_ms=corrections.exit_speed_correction_ms,
+        )
+    else:
+        control_constraints = ControlConstraints.unconstrained()
 
     priority = _deployment_priority(frame, lateral_limit)
     ers_scale = 1.0
     for _ in range(5):
         deploy_fraction = priority * ers_scale
-        speed = _solve_speed_envelope(frame, parameters, lateral_limit, deploy_fraction)
+        speed = _solve_speed_envelope(frame, parameters, lateral_limit, deploy_fraction, control_constraints)
         dt, elapsed, throttle, brake = _derive_controls(speed, distance)
         deploy_kw = parameters.ers_power_kw * deploy_fraction * (throttle / 100)
         regen_kw = parameters.ers_power_kw * parameters.regen_efficiency * (brake / 100)
@@ -879,7 +938,7 @@ def simulate_lap(line: pd.DataFrame, parameters: VehicleParameters, corrections:
             break
         ers_scale *= max(.05, available_kj / max(deploy_energy_kj, 1e-6))
 
-    battery = _integrate_battery(dt, deploy_kw, regen_kw, parameters)
+    battery, deploy_kw = _integrate_battery(dt, deploy_kw, regen_kw, parameters)
     gear = np.clip(np.searchsorted(np.array([90, 125, 160, 195, 230, 270, 310]), speed * 3.6) + 1, 1, 8)
     acceleration = np.gradient(speed, np.maximum(elapsed, 1e-6))
     trace = frame.assign(
@@ -895,7 +954,7 @@ def simulate_lap(line: pd.DataFrame, parameters: VehicleParameters, corrections:
         battery_kj=battery,
         elapsed_s=elapsed,
     )
-    return LapSolution(float(dt.sum()), trace, parameters, ers_scale)
+    return LapSolution(float(trace.elapsed_s.iloc[-1]), trace, parameters, ers_scale)
 ```
 
 
@@ -935,9 +994,15 @@ def optimize_line(track: pd.DataFrame, parameters: VehicleParameters, config: Li
         width = np.minimum(track.left_width_m.to_numpy(float), track.right_width_m.to_numpy(float))
         x = track.center_x_m + track.normal_x * lateral * width
         y = track.center_y_m + track.normal_y * lateral * width
-        heading = np.unwrap(np.arctan2(np.gradient(y), np.gradient(x)))
-        curvature = np.gradient(heading, track.distance_m.to_numpy(float))
-        return track.assign(x_m=x, y_m=y, curvature_per_m=curvature, lateral_fraction=lateral)
+        segment = np.hypot(np.diff(x, append=x[0]), np.diff(y, append=y[0]))
+        distance = np.r_[0.0, np.cumsum(segment[:-1])]
+        progress = distance / distance[-1]
+        heading = np.unwrap(np.arctan2(np.gradient(y, distance), np.gradient(x, distance)))
+        curvature = np.gradient(heading, distance)
+        return track.assign(
+            x_m=x, y_m=y, distance_m=distance, progress=progress,
+            curvature_per_m=curvature, lateral_fraction=lateral,
+        )
 
     def objective(values: np.ndarray) -> float:
         line = materialize(values)
@@ -1113,17 +1178,24 @@ from .baselines import circuit_folds
 def score_fold(test: pd.DataFrame, prediction: pd.DataFrame, baseline: pd.DataFrame, held_out: str) -> dict[str, object]:
     joined = test[[
         "pair_id", "archetype", "sector", "delta_phase_time_s", "delta_minimum_speed_kph",
-        "delta_braking_onset_m"
+        "delta_braking_onset_from_complex_start_m"
     ]].merge(prediction, on="pair_id", validate="one_to_one")
     baseline_joined = test[["pair_id", "delta_phase_time_s"]].merge(
         baseline[["pair_id", "predicted_delta_phase_time_s"]], on="pair_id", validate="one_to_one"
     )
     phase_error = joined.predicted_delta_phase_time_s - joined.delta_phase_time_s
     speed_error = joined.predicted_delta_minimum_speed_kph - joined.delta_minimum_speed_kph
-    brake_error = joined.predicted_delta_braking_onset_m - joined.delta_braking_onset_m
-    lap_actual = float(test.delta_phase_time_s.sum())
-    lap_predicted = float(joined.predicted_delta_phase_time_s.sum())
-    lap_baseline = float(baseline_joined.predicted_delta_phase_time_s.sum())
+    brake_error = joined.predicted_delta_braking_onset_from_complex_start_m - joined.delta_braking_onset_from_complex_start_m
+    lap_rows = joined.groupby("lap_slug", sort=True).agg(
+        actual=("delta_phase_time_s", "sum"),
+        predicted=("predicted_delta_phase_time_s", "sum"),
+    )
+    baseline_laps = baseline_joined.groupby("lap_slug", sort=True).agg(
+        actual=("delta_phase_time_s", "sum"),
+        predicted=("predicted_delta_phase_time_s", "sum"),
+    )
+    lap_errors = (lap_rows.predicted - lap_rows.actual).to_dict()
+    baseline_lap_errors = (baseline_laps.predicted - baseline_laps.actual).to_dict()
     sector_errors = joined.groupby("sector").apply(
         lambda group: float(group.predicted_delta_phase_time_s.sum() - group.delta_phase_time_s.sum()),
         include_groups=False,
@@ -1135,8 +1207,8 @@ def score_fold(test: pd.DataFrame, prediction: pd.DataFrame, baseline: pd.DataFr
     ).mean()
     return {
         "held_out": held_out,
-        "lap_error_s": lap_predicted - lap_actual,
-        "baseline_lap_error_s": lap_baseline - lap_actual,
+        "lap_errors_s": lap_errors,
+        "baseline_lap_errors_s": baseline_lap_errors,
         "sector_absolute_errors_s": [abs(float(value)) for value in sector_errors],
         "minimum_speed_absolute_errors_kph": np.abs(speed_error).tolist(),
         "braking_onset_absolute_errors_m": np.abs(brake_error).tolist(),
@@ -1146,8 +1218,8 @@ def score_fold(test: pd.DataFrame, prediction: pd.DataFrame, baseline: pd.DataFr
 
 
 def aggregate_fold_metrics(rows: list[dict[str, object]]) -> ValidationMetrics:
-    lap_errors = np.asarray([abs(row["lap_error_s"]) for row in rows], dtype=float)
-    baseline_errors = np.asarray([abs(row["baseline_lap_error_s"]) for row in rows], dtype=float)
+    lap_errors = np.asarray([abs(value) for row in rows for value in row["lap_errors_s"].values()], dtype=float)
+    baseline_errors = np.asarray([abs(value) for row in rows for value in row["baseline_lap_errors_s"].values()], dtype=float)
     sector_errors = np.concatenate([np.asarray(row["sector_absolute_errors_s"], dtype=float) for row in rows])
     speed_errors = np.concatenate([np.asarray(row["minimum_speed_absolute_errors_kph"], dtype=float) for row in rows])
     brake_errors = np.concatenate([np.asarray(row["braking_onset_absolute_errors_m"], dtype=float) for row in rows])
@@ -1185,6 +1257,18 @@ def run_loco_validation(
         "metrics": asdict(metrics),
         "release_gates": {"passed": evaluation.passed, "checks": evaluation.checks},
     }
+```
+
+
+The same module must implement `run_rolling_origin_validation()`. Each origin is defined by an immutable UTC cutoff before the held-out event; training rows require `date_start < cutoff`, and held-out realized conditions never enter the scenario inputs. `combine_release_evidence(loco, rolling, uncertainty, baselines, ablations, identifiability, feasibility)` is the only function allowed to set `release_gates.passed`; it requires every report to pass.
+
+```python
+def combine_release_evidence(*reports: GateReport) -> GateEvaluation:
+    missing = REQUIRED_RELEASE_REPORTS - {report.name for report in reports}
+    if missing:
+        raise ValueError(f"missing release reports: {sorted(missing)}")
+    checks = {f"{report.name}.{key}": value for report in reports for key, value in report.checks.items()}
+    return GateEvaluation(passed=all(checks.values()), checks=checks)
 ```
 
 - [ ] **Step 4: Verify GREEN**
@@ -1346,13 +1430,11 @@ def build_spa_correction_draws(
         circuit_id="__UNKNOWN__",
         quality_weight=1.0,
     )
-    available = fit.outcomes["delta_phase_time_s"].posterior.sizes["chain"] * fit.outcomes["delta_phase_time_s"].posterior.sizes["draw"]
-    rng = np.random.default_rng(random_seed)
-    indices = rng.choice(available, size=min(draw_count, available), replace=False)
-    predictions = {
-        outcome: posterior_draw_predictions(inference, frame, fit.encoder, indices)
-        for outcome, inference in fit.outcomes.items()
-    }
+    predictions = sample_covariance_coupled_outcome_draws(
+        outcomes=fit.outcomes, outcome_names=fit.outcome_names, frame=frame, encoder=fit.encoder,
+        covariance=fit.cross_outcome_covariance, draw_count=draw_count, random_seed=random_seed,
+    )
+    indices = np.arange(next(iter(predictions.values())).shape[0])
     draws: list[pd.DataFrame] = []
     for draw_index in range(len(indices)):
         draws.append(pd.DataFrame({
@@ -1361,9 +1443,11 @@ def build_spa_correction_draws(
             "distance_m": frame.apex_distance_m,
             "speed_correction_ms": predictions["delta_minimum_speed_kph"][draw_index] / 3.6,
             "phase_time_correction_s": predictions["delta_phase_time_s"][draw_index],
-            "braking_onset_correction_m": predictions["delta_braking_onset_m"][draw_index],
+            "braking_onset_correction_m": predictions["delta_braking_onset_from_complex_start_m"][draw_index],
             "exit_speed_correction_ms": predictions["delta_exit_speed_100m_kph"][draw_index] / 3.6,
             "full_throttle_fraction_correction": predictions["delta_full_throttle_fraction"][draw_index],
+            "correction_family": correction_family_for_phase(frame.phase_type),
+            "application_count": 1,
         }))
     return draws
 
@@ -1535,7 +1619,7 @@ def build_corner_predictions(
             "analogues": [{
                 "circuitLabel": row.circuit_id,
                 "complexLabel": row.complex_id,
-                "year": 2026,
+                "year": int(row.season),
                 "weight": float(row.weight),
                 "phaseId": row.phase_id,
             } for row in analogues.itertuples(index=False)],
@@ -1607,13 +1691,32 @@ from datetime import UTC, datetime
 from spa_calibration.artifact import build_prediction_artifact, validate_prediction_artifact
 
 
+def complete_provenance_fixture() -> dict[str, object]:
+    return {
+        "modelVersion": "spa-corner-transfer/0.1.0",
+        "sourceCutoff": "2026-07-13T00:00:00Z",
+        "trainingManifestChecksum": "a" * 64,
+        "sourceEligibilityChecksum": "b" * 64,
+        "circuitYearEligibilityChecksum": "c" * 64,
+        "scenarioChecksum": "d" * 64,
+        "randomSeed": 20260714,
+        "regulationIdentifiers": ["FIA-2026-technical-issue-17"],
+        "hyperparameters": {"draws": 1000},
+        "trainingCircuits": ["silverstone"],
+        "heldOutCircuits": ["spa-francorchamps"],
+        "validationReportChecksums": {"loco": "e" * 64, "rollingOrigin": "f" * 64},
+        "codeCommit": "1" * 40,
+        "scenario": {"id": "spa-2026-dry-qualifying-reference/v1", "attempts": 2},
+    }
+
+
 def test_failed_validation_suppresses_field_best() -> None:
     artifact = build_prediction_artifact(
         validation={"release_gates": {"passed": False, "checks": {"lap_time_mae": False}}},
         field_summary={"lapTimeSeconds": {"lower80": 98.5, "median": 99.0, "upper80": 99.5}, "trace": [], "timingTable": []},
         team_predictions=[],
         corner_predictions=[],
-        provenance={"modelVersion": "x", "sourceCutoff": "2026-07-13T00:00:00Z"},
+        provenance=complete_provenance_fixture(),
         generated_at=datetime(2026, 7, 14, tzinfo=UTC),
     )
     assert artifact["status"] == "failed-validation"
@@ -1627,7 +1730,7 @@ def test_released_artifact_has_ordered_intervals() -> None:
         field_summary={"lapTimeSeconds": {"lower80": 100, "median": 101, "upper80": 102}, "trace": [], "timingTable": []},
         team_predictions=[],
         corner_predictions=[],
-        provenance={"modelVersion": "x", "sourceCutoff": "2026-07-13T00:00:00Z"},
+        provenance=complete_provenance_fixture(),
         generated_at=datetime(2026, 7, 14, tzinfo=UTC),
     )
     interval = artifact["fieldBest"]["lapTimeSeconds"]
@@ -1655,6 +1758,46 @@ import orjson
 
 SCHEMA_VERSION = "spa-calibration-prediction/v1"
 
+REQUIRED_PROVENANCE = {
+    "modelVersion", "sourceCutoff", "trainingManifestChecksum", "sourceEligibilityChecksum",
+    "circuitYearEligibilityChecksum", "scenarioChecksum", "randomSeed",
+    "regulationIdentifiers", "hyperparameters", "trainingCircuits", "heldOutCircuits",
+    "validationReportChecksums", "codeCommit",
+}
+
+def validate_release_provenance(provenance: dict[str, object]) -> None:
+    missing = REQUIRED_PROVENANCE - provenance.keys()
+    if missing:
+        raise ValueError(f"released artifact missing provenance: {sorted(missing)}")
+
+
+REQUIRED_REPORTS = {
+    "loco", "rollingOrigin", "uncertaintyCalibration", "baselinesAblations",
+    "identifiability", "physicalFeasibility", "eligibility",
+}
+
+def validate_release_reports(validation: dict[str, object]) -> None:
+    reports = validation.get("reports", {})
+    failed = sorted(name for name in REQUIRED_REPORTS if reports.get(name, {}).get("passed") is not True)
+    if failed:
+        raise ValueError(f"missing or failed release reports: {failed}")
+
+def validate_ordered_prediction_intervals(artifact: dict[str, object]) -> None:
+    interval = artifact["fieldBest"]["lapTimeSeconds"]
+    values = [interval[key] for key in ("lower95", "lower80", "median", "upper80", "upper95")]
+    if values != sorted(values):
+        raise ValueError("prediction intervals are not ordered")
+
+def validate_scenario_and_cutoff_freshness(artifact: dict[str, object]) -> None:
+    scenario = artifact.get("provenance", {}).get("scenario", {})
+    if scenario.get("id") != "spa-2026-dry-qualifying-reference/v1" or scenario.get("attempts") != 2:
+        raise ValueError("unsupported Spa prediction scenario")
+    generated = datetime.fromisoformat(str(artifact["generatedAt"]))
+    cutoff = datetime.fromisoformat(str(artifact["sourceCutoff"]))
+    if generated < cutoff:
+        raise ValueError("artifact predates source cutoff")
+
+
 
 def _interval(values: list[float]) -> dict[str, float]:
     array = np.asarray(values, dtype=float)
@@ -1674,6 +1817,9 @@ def _checksum(payload: dict[str, object]) -> str:
 
 def build_prediction_artifact(*, validation, field_summary, team_predictions, corner_predictions, provenance, generated_at: datetime) -> dict[str, object]:
     passed = bool(validation["release_gates"]["passed"])
+    if passed:
+        validate_release_reports(validation)
+        validate_release_provenance(provenance)
     released_teams = [row for row in team_predictions if row.get("supported") is True]
     artifact: dict[str, object] = {
         "schemaVersion": SCHEMA_VERSION,
@@ -1699,8 +1845,17 @@ def validate_prediction_artifact(artifact: dict[str, object]) -> dict[str, objec
     actual = _checksum(artifact)
     if artifact.get("checksum") != actual:
         raise ValueError("prediction checksum mismatch")
-    if artifact.get("status") != "released" and artifact.get("fieldBest") is not None:
+    status = artifact.get("status")
+    gates_passed = bool(artifact.get("validation", {}).get("release_gates", {}).get("passed"))
+    if status != "released" and artifact.get("fieldBest") is not None:
         raise ValueError("non-released artifact must suppress fieldBest")
+    if status == "released":
+        if not gates_passed or artifact.get("fieldBest") is None:
+            raise ValueError("released artifact requires passing gates and fieldBest")
+        validate_release_reports(artifact.get("validation", {}))
+        validate_release_provenance(artifact.get("provenance", {}))
+        validate_ordered_prediction_intervals(artifact)
+        validate_scenario_and_cutoff_freshness(artifact)
     return artifact
 ```
 

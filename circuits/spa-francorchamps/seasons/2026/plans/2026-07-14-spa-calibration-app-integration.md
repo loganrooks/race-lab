@@ -20,6 +20,15 @@
 - The app must preserve zoom/pan/touch, reduced motion, keyboard access, mobile layout, offline standalone operation, and RawGitHack compatibility.
 - No provisional 1:40.4 claim may remain in source, bundle, standalone HTML, screenshots, or copy.
 
+
+## Mandatory Review Resolutions
+
+- The browser, build generator, Python model, and CLI use the same release predicate and fixture corpus. A checksum is necessary but never sufficient.
+- The build generator calls `validateCalibrationArtifact()` after checksum verification and emits a frozen pending artifact on any schema, gate, interval, provenance, scenario, cutoff, or freshness failure.
+- Historical OpenF1 inputs are normalized at the adapter boundary from legacy `speed/throttle/brake` names to `speedKph/throttlePct/brakePct`; raw objects never enter `TraceSource`.
+- The UI displays the estimand and `spa-2026-dry-qualifying-reference/v1` scenario, including the best-of-two-attempts meaning and condition distributions.
+- Rolling-origin, uncertainty calibration, baseline/ablation, identifiability, physical feasibility, and eligibility summaries are required before a released state can render.
+
 ---
 
 ## File Map
@@ -139,6 +148,26 @@ Expected: missing module.
 // js/calibration-schema.js
 const SCHEMA = 'spa-calibration-prediction/v1';
 const STATUS = new Set(['pending', 'failed-validation', 'released']);
+const REQUIRED_REPORTS = ['loco', 'rollingOrigin', 'uncertaintyCalibration', 'baselinesAblations', 'identifiability', 'physicalFeasibility', 'eligibility'];
+const REQUIRED_PROVENANCE = ['trainingManifestChecksum', 'sourceEligibilityChecksum', 'circuitYearEligibilityChecksum', 'scenarioChecksum', 'randomSeed', 'regulationIdentifiers', 'hyperparameters', 'trainingCircuits', 'heldOutCircuits', 'validationReportChecksums', 'codeCommit'];
+
+function validateRequiredReleaseReports(validation) {
+  for (const name of REQUIRED_REPORTS) {
+    if (validation?.reports?.[name]?.passed !== true) throw new TypeError(`Missing or failed release report: ${name}`);
+  }
+}
+
+function validateRequiredProvenance(provenance) {
+  for (const name of REQUIRED_PROVENANCE) {
+    if (provenance?.[name] === undefined || provenance?.[name] === null) throw new TypeError(`Missing release provenance: ${name}`);
+  }
+}
+
+function validateScenario(scenario) {
+  if (scenario?.id !== 'spa-2026-dry-qualifying-reference/v1' || scenario?.attempts !== 2) {
+    throw new TypeError('Unsupported Spa prediction scenario');
+  }
+}
 
 export function canonicalJson(value) {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
@@ -167,7 +196,7 @@ export function pendingCalibrationArtifact(reason = 'missing') {
   });
 }
 
-export function validateCalibrationArtifact(value) {
+export function validateCalibrationArtifact(value, { now = new Date(), maximumAgeHours = 24 * 7 } = {}) {
   if (!value || value.schemaVersion !== SCHEMA) throw new TypeError('Unsupported calibration schema');
   if (!STATUS.has(value.status)) throw new TypeError('Invalid calibration status');
   if (value.status !== 'pending' && !/^[0-9a-f]{64}$/.test(value.checksum || '')) throw new TypeError('Invalid calibration checksum');
@@ -175,11 +204,19 @@ export function validateCalibrationArtifact(value) {
     throw new TypeError('Non-released calibration artifact must suppress fieldBest');
   }
   if (value.status === 'released') {
+    if (value.validation?.release_gates?.passed !== true) throw new TypeError('Released artifact requires passing release gates');
+    if (!value.fieldBest) throw new TypeError('Released artifact requires fieldBest');
+    validateRequiredReleaseReports(value.validation);
+    validateRequiredProvenance(value.provenance);
+    validateScenario(value.provenance?.scenario);
+    const generated = Date.parse(value.generatedAt);
+    const sourceCutoff = Date.parse(value.sourceCutoff);
+    if (!Number.isFinite(generated) || !Number.isFinite(sourceCutoff)) throw new TypeError('Released artifact requires valid timestamps');
+    if (now.getTime() - generated > maximumAgeHours * 3600_000) throw new TypeError('Released artifact is stale');
     const interval = value.fieldBest?.lapTimeSeconds;
     if (!interval || !(interval.lower80 <= interval.median && interval.median <= interval.upper80)) {
       throw new TypeError('Calibration lap-time interval is not ordered');
     }
-    if (!value.validation?.release_gates?.passed) throw new TypeError('Released artifact lacks passing gates');
   }
   for (const key of ['teams', 'historicalReferences', 'analogueTraces', 'corners']) {
     if (!Array.isArray(value[key])) throw new TypeError(`${key} must be an array`);
@@ -192,6 +229,7 @@ export function validateCalibrationArtifact(value) {
 // scripts-build-calibration-data.mjs
 import { readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+import { validateCalibrationArtifact } from './js/calibration-schema.js';
 
 const input = new URL('./calibration/artifacts/predictions/spa-2026-prediction-v1.json', import.meta.url);
 const output = new URL('./js/calibration-data.js', import.meta.url);
@@ -213,6 +251,7 @@ function pending(reason) {
   };
 }
 
+const generatedAt = new Date();
 let artifact;
 try {
   artifact = JSON.parse(await readFile(input, 'utf8'));
@@ -220,6 +259,7 @@ try {
     const { checksum, ...unsigned } = artifact;
     const actual = createHash('sha256').update(canonicalJson(unsigned)).digest('hex');
     if (checksum !== actual) throw new Error(`checksum mismatch ${checksum} != ${actual}`);
+    artifact = validateCalibrationArtifact(artifact, { now: generatedAt, maximumAgeHours: 24 * 7 });
   }
 } catch (error) {
   artifact = pending(error.code === 'ENOENT' ? 'missing' : 'invalid-or-unverified');
@@ -369,7 +409,12 @@ export function buildTraceSources({ simulation, calibration, references }) {
       label: `${reference.driver.name} · ${reference.year} ${reference.sessionName}`,
       kind: 'historical',
       spatialRoute: 'reference-racing-line',
-      trace: reference.trace,
+      trace: reference.trace.map((sample) => ({
+        ...sample,
+        speedKph: sample.speedKph ?? sample.speed,
+        throttlePct: sample.throttlePct ?? sample.throttle,
+        brakePct: sample.brakePct ?? sample.brake,
+      })),
       timingTable: reference.timingTable,
       lapTimeSeconds: reference.lapTimeSeconds,
       interval: null,

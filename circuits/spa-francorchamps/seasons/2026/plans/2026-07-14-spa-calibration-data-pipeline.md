@@ -20,6 +20,20 @@
 - Use 2024 only as a control season; do not mix it into the 2025→2026 treatment label.
 - All generated tables sort deterministically before writing.
 
+
+## Mandatory Review Resolutions
+
+The following contracts are normative for every task and snippet in this plan.
+
+- **Source feasibility first:** `calibration/config/source-eligibility.yaml` declares channel semantics, units, nominal and observed sampling, anomalies, licensing, derivable features, prohibited claims, and eligibility. `calibration/manifests/circuit-year-eligibility.json` records the evaluated result for every circuit-season-session. No downstream feature is produced unless its declared requirements pass.
+- **Circuit-unique sessions:** each event row supplies `meeting_key` when frozen, otherwise `meeting_name`, `circuit_short_name`, and a bounded event-date window. Resolution must return exactly one candidate or fail; country alone is never sufficient.
+- **Qualifying selection:** selection is Q3/SQ3 first per coherent car-driver profile. Q2/SQ2 and then Q1/SQ1 are permitted only by declared ordered fallback, with `selection_fallback`, `fallback_reason`, and source segment retained in every lap and manifest.
+- **Raw coverage precedes resampling:** completeness, source gaps, reversals, and channel coverage are computed on coupled/aligned source rows before a full canonical grid is created. Resampling cannot upgrade an ineligible lap.
+- **Canonical geometry is immutable:** resampled telemetry receives geometry by joining/interpolating from the configured canonical track. Source coordinates never overwrite canonical distance, curvature, gradient, sector, widths, or provenance.
+- **Bounded progress:** every output has `0 <= progress <= 1`, is monotonic, contains the exact zero and track-length endpoints once, and never extends beyond canonical length.
+- **Phase semantics:** braking onset is an absolute canonical distance plus a corner-relative offset from `complex_start_distance_m`; full-power begins at the detected full-power sample and ends at the complex window end. Zero-length phases are invalid.
+- **Lap coherence:** all validation identifiers include lap/profile keys so Plan B aggregates phases into coherent laps, not fleet-wide sums.
+
 ---
 
 ## File Map
@@ -30,12 +44,18 @@ calibration/
 ├── README.md
 ├── config/
 │   ├── events.yaml
-│   └── circuits.yaml
+│   ├── circuits.yaml
+│   ├── source-eligibility.yaml
+│   └── feature-requirements.yaml
 ├── data/
 │   ├── raw/openf1/
 │   ├── geometry/
 │   ├── fixtures/
 │   └── processed/
+├── manifests/
+│   ├── source-eligibility.json
+│   ├── circuit-year-eligibility.json
+│   └── lap-selection.json
 ├── src/spa_calibration/
 │   ├── __init__.py
 │   ├── schemas.py
@@ -93,6 +113,29 @@ class AlignedLap:
 
 ---
 
+
+### Task 0: Establish source feasibility and circuit-year eligibility
+
+**Files:**
+- Create: `calibration/config/source-eligibility.yaml`
+- Create: `calibration/config/feature-requirements.yaml`
+- Create: `calibration/src/spa_calibration/eligibility.py`
+- Create: `calibration/tests/test_eligibility.py`
+- Generate: `calibration/manifests/source-eligibility.json`
+- Generate: `calibration/manifests/circuit-year-eligibility.json`
+
+**Interfaces:**
+- Produces `SourceEligibilityManifest`, `CircuitYearEligibility`, `EligibilityEvaluation.required_channels()`, and a deterministic feasibility-spike report.
+- Eligibility levels are `excluded`, `sector-only`, `phase`, and `corner`; downstream modules request a level and fail closed when it is unavailable.
+- Required varied-circuit spike: Silverstone/Suzuka (high speed), Montreal (heavy braking), Spielberg (elevation), Barcelona (sustained load), Miami (traction/long straight).
+
+- [ ] **Step 1: Write failing manifest tests** that reject unknown units, missing licensing, missing observed resolution, and a feature declared eligible without all required channels.
+- [ ] **Step 2: Run `python -m pytest tests/test_eligibility.py -q` and verify RED.**
+- [ ] **Step 3: Implement versioned YAML input and JSON evaluated manifests.** Every circuit-year-session row records source query identity, adapter version, channels, raw sample counts, median/p95 sampling interval, gaps, quantization, semantic delays, derivable features, prohibited claims, redistribution policy, quality flags, and eligibility level.
+- [ ] **Step 4: Run the frozen feasibility fixtures and verify GREEN.**
+- [ ] **Step 5: Commit the executable eligibility contract.**
+
+---
 ### Task 1: Bootstrap the calibration package and versioned schemas
 
 **Files:**
@@ -228,7 +271,7 @@ testpaths = ["tests"]
 from __future__ import annotations
 from datetime import datetime
 from typing import Annotated, Literal
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 Sha256 = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
 QualifyingSession = Literal["Qualifying", "Sprint Qualifying"]
@@ -255,7 +298,10 @@ class LapQuality(FrozenModel):
     score: float = Field(ge=0, le=1)
     accepted: bool = False
     flags: tuple[str, ...] = ()
-    coverage_ratio: float = Field(default=0, ge=0, le=1)
+    raw_progress_start: float = Field(default=0, ge=0, le=1)
+    raw_progress_end: float = Field(default=0, ge=0, le=1)
+    raw_coverage_ratio: float = Field(default=0, ge=0, le=1)
+    raw_channel_coverage: dict[str, float] = Field(default_factory=dict)
     maximum_gap_s: float = Field(default=0, ge=0)
     maximum_progress_reversal: float = Field(default=0, ge=0)
     weather: Literal["dry", "wet", "mixed", "unknown"] = "unknown"
@@ -266,6 +312,8 @@ class LapRecord(FrozenModel):
     circuit_id: str = Field(pattern=r"^[a-z0-9-]+$")
     session_name: QualifyingSession
     session_segment: QualifyingSegment
+    selection_fallback: bool = False
+    fallback_reason: str | None = None
     driver_acronym: str = Field(min_length=2, max_length=4)
     driver_name: str = Field(min_length=2)
     team_name: str = Field(min_length=2)
@@ -293,10 +341,11 @@ class PhaseRecord(FrozenModel):
     confidence: float = Field(ge=0, le=1)
     detector_version: str
 
-    @field_validator("end_distance_m")
-    @classmethod
-    def end_must_be_positive(cls, value: float) -> float:
-        return value
+    @model_validator(mode="after")
+    def end_must_follow_start(self) -> "PhaseRecord":
+        if self.end_distance_m <= self.start_distance_m:
+            raise ValueError("phase end must be greater than phase start")
+        return self
 
 
 class FeatureRecord(FrozenModel):
@@ -309,12 +358,19 @@ class FeatureRecord(FrozenModel):
     phase_type: str
     archetype: str
     sector: int = Field(ge=1, le=3)
+    track_length_m: float = Field(gt=0)
+    complex_start_distance_m: float = Field(ge=0)
+    complex_end_distance_m: float = Field(gt=0)
+    phase_start_distance_m: float = Field(ge=0)
+    phase_end_distance_m: float = Field(gt=0)
+    apex_distance_m: float = Field(ge=0)
     phase_time_s: float = Field(gt=0)
     entry_speed_kph: float = Field(ge=0)
     minimum_speed_kph: float = Field(ge=0)
     exit_speed_50m_kph: float = Field(ge=0)
     exit_speed_100m_kph: float = Field(ge=0)
-    braking_onset_m: float
+    braking_onset_distance_m: float | None
+    braking_onset_from_complex_start_m: float | None
     braking_length_m: float = Field(ge=0)
     throttle_pickup_m: float
     full_throttle_fraction: float = Field(ge=0, le=1)
@@ -340,6 +396,9 @@ class CorpusManifest(FrozenModel):
     feature_count: int = Field(ge=0)
     source_checksums: dict[str, Sha256]
     artifact_checksums: dict[str, Sha256]
+    source_eligibility_checksum: Sha256
+    circuit_year_eligibility_checksum: Sha256
+    lap_selection_checksum: Sha256
 ```
 
 ```python
@@ -428,7 +487,7 @@ async def test_client_caches_exact_query_and_payload(tmp_path) -> None:
         "date_start": "2026-07-04T14:00:00+00:00"
     }]))
     client = OpenF1Client(cache=ContentAddressedCache(tmp_path), retrieved_at=datetime(2026, 7, 14, tzinfo=UTC))
-    result = await client.resolve_session(EventSpec(2026, "silverstone", "Great Britain", "Qualifying"))
+    result = await client.resolve_session(EventSpec(season=2026, circuit_id="silverstone", country_name="Great Britain", session_name="Qualifying", meeting_name="British Grand Prix", circuit_short_name="Silverstone", event_date_start=datetime(2026, 7, 3, tzinfo=UTC), event_date_end=datetime(2026, 7, 6, tzinfo=UTC)))
     assert result.session_key == 9901
     assert route.call_count == 1
     assert result.source.query == "country_name=Great+Britain&session_name=Qualifying&year=2026"
@@ -517,6 +576,11 @@ class EventSpec(BaseModel):
     circuit_id: str
     country_name: str
     session_name: Literal["Qualifying", "Sprint Qualifying"]
+    meeting_key: int | None = None
+    meeting_name: str
+    circuit_short_name: str
+    event_date_start: datetime
+    event_date_end: datetime
 
 
 @dataclass(frozen=True)
@@ -567,15 +631,22 @@ class OpenF1Client:
         return payload, SourceEnvelope(endpoint, query, cached.checksum, self.retrieved_at)
 
     async def resolve_session(self, spec: EventSpec) -> SessionResolution:
-        rows, source = await self.get("sessions", {
-            "year": spec.season,
-            "country_name": spec.country_name,
-            "session_name": spec.session_name,
-        })
-        candidates = [row for row in rows if row.get("session_name") == spec.session_name]
-        if not candidates:
-            raise LookupError(f"No {spec.season} {spec.country_name} {spec.session_name} session")
-        row = max(candidates, key=lambda item: item["date_start"])
+        params: dict[str, object] = {"year": spec.season, "session_name": spec.session_name}
+        if spec.meeting_key is not None:
+            params["meeting_key"] = spec.meeting_key
+        else:
+            params["country_name"] = spec.country_name
+        rows, source = await self.get("sessions", params)
+        candidates = [
+            row for row in rows
+            if row.get("session_name") == spec.session_name
+            and spec.event_date_start <= datetime.fromisoformat(row["date_start"]) <= spec.event_date_end
+            and (spec.meeting_key is not None or row.get("meeting_name") == spec.meeting_name)
+            and (not row.get("circuit_short_name") or row.get("circuit_short_name") == spec.circuit_short_name)
+        ]
+        if len(candidates) != 1:
+            raise LookupError(f"Expected one circuit-unique session for {spec.circuit_id}, found {len(candidates)}")
+        row = candidates[0]
         return SessionResolution(
             meeting_key=int(row["meeting_key"]),
             session_key=int(row["session_key"]),
@@ -591,7 +662,7 @@ events:
   - {circuit_id: melbourne, country_name: Australia}
   - {circuit_id: shanghai, country_name: China}
   - {circuit_id: suzuka, country_name: Japan}
-  - {circuit_id: miami, country_name: United States}
+  - {circuit_id: miami, country_name: United States, meeting_name: Miami Grand Prix, circuit_short_name: Miami, event_date_start: 2026-05-01T00:00:00Z, event_date_end: 2026-05-04T23:59:59Z}
   - {circuit_id: montreal, country_name: Canada}
   - {circuit_id: monaco, country_name: Monaco}
   - {circuit_id: barcelona, country_name: Spain}
@@ -712,11 +783,22 @@ from .schemas import LapQuality
 
 
 @dataclass(frozen=True)
+class RawCoverage:
+    progress_start: float
+    progress_end: float
+    coverage_ratio: float
+    channel_coverage: dict[str, float]
+    maximum_gap_s: float
+    maximum_progress_reversal: float
+
+
+@dataclass(frozen=True)
 class LapContext:
     rainfall: bool | None
     race_control_flags: tuple[str, ...]
     is_pit_out: bool
     aborted: bool
+    raw_coverage: RawCoverage
 
 
 def classify_lap(lap_time_s: float, trace: pd.DataFrame, context: LapContext) -> LapQuality:
@@ -724,7 +806,7 @@ def classify_lap(lap_time_s: float, trace: pd.DataFrame, context: LapContext) ->
     progress = trace["progress"].to_numpy(float)
     gaps = np.diff(elapsed) if len(elapsed) > 1 else np.array([lap_time_s])
     reversals = np.maximum(0, -np.diff(progress)) if len(progress) > 1 else np.array([1.0])
-    coverage = float(np.clip(progress[-1] - progress[0], 0, 1)) if len(progress) else 0
+    coverage = context.raw_coverage.coverage_ratio
     maximum_gap = float(gaps.max(initial=lap_time_s))
     maximum_reversal = float(reversals.max(initial=0))
 
@@ -760,7 +842,10 @@ def classify_lap(lap_time_s: float, trace: pd.DataFrame, context: LapContext) ->
         score=score,
         accepted=accepted,
         flags=tuple(dict.fromkeys(flags)),
-        coverage_ratio=coverage,
+        raw_progress_start=context.raw_coverage.progress_start,
+        raw_progress_end=context.raw_coverage.progress_end,
+        raw_coverage_ratio=coverage,
+        raw_channel_coverage=context.raw_coverage.channel_coverage,
         maximum_gap_s=maximum_gap,
         maximum_progress_reversal=maximum_reversal,
         weather=weather,
@@ -862,7 +947,7 @@ def test_resampling_emits_fixed_distance_grid_and_interpolates_channels() -> Non
         "brake": [1, 0, 0],
         "gear": [2, 3, 4],
     })
-    result = resample_aligned_trace(trace, track_length_m=20, spacing_m=5)
+    result = resample_aligned_trace(trace, track=track, spacing_m=5)
     assert result["distance_m"].tolist() == [0, 5, 10, 15, 20]
     assert result.loc[result.distance_m == 5, "speed_kph"].item() == 125
     assert result.loc[result.distance_m == 5, "gear"].item() == 2
@@ -970,9 +1055,10 @@ def align_progress_to_track(location: pd.DataFrame, track: CanonicalTrack) -> pd
     return result
 
 
-def resample_aligned_trace(trace: pd.DataFrame, track_length_m: float, spacing_m: float = 5.0) -> pd.DataFrame:
+def resample_aligned_trace(trace: pd.DataFrame, track: CanonicalTrack, spacing_m: float = 5.0) -> pd.DataFrame:
     ordered = trace.sort_values("distance_m").drop_duplicates("distance_m", keep="last")
-    grid = np.arange(0, track_length_m + spacing_m * .5, spacing_m)
+    interior = np.arange(0.0, track.length_m, spacing_m, dtype=float)
+    grid = np.unique(np.r_[interior, track.length_m])
     output = pd.DataFrame({"distance_m": grid})
     continuous = ["elapsed_s", "speed_kph", "throttle_pct", "rpm"]
     discrete = ["brake", "gear", "drs"]
@@ -984,7 +1070,15 @@ def resample_aligned_trace(trace: pd.DataFrame, track_length_m: float, spacing_m
             indices = np.searchsorted(ordered.distance_m.to_numpy(), grid, side="right") - 1
             indices = np.clip(indices, 0, len(ordered) - 1)
             output[column] = ordered[column].to_numpy()[indices]
-    output["progress"] = output.distance_m / track_length_m
+    for column, values in {
+        "x_m": track.x_m, "y_m": track.y_m, "elevation_m": track.elevation_m,
+        "heading_rad": track.heading_rad, "curvature_per_m": track.curvature_per_m,
+        "gradient": track.gradient, "sector": track.sector,
+    }.items():
+        output[column] = np.interp(grid, track.distance_m, values)
+    output["progress"] = np.clip(output.distance_m / track.length_m, 0.0, 1.0)
+    assert output.progress.is_monotonic_increasing
+    assert output.progress.iloc[0] == 0.0 and output.progress.iloc[-1] == 1.0
     return output
 ```
 
@@ -1137,8 +1231,8 @@ def detect_complex_phases(trace: pd.DataFrame, spec: ComplexSpec, lap_slug: str 
         ("turn-in", turn_in),
         ("apex", apex_index),
         ("throttle-pickup", throttle_pickup),
-        ("exit-acceleration", min(full_power, len(window) - 1)),
-        ("full-power", len(window) - 1),
+        ("exit-acceleration", max(throttle_pickup, min(full_power - 1, len(window) - 2))),
+        ("full-power", min(full_power, len(window) - 2)),
     ])
     ordered: list[tuple[str, int]] = []
     last = 0
@@ -1293,12 +1387,21 @@ def extract_phase_features(trace: pd.DataFrame, phase: PhaseRecord, metadata: di
         phase_type=phase.phase_type,
         archetype=str(metadata["archetype"]),
         sector=int(metadata["sector"]),
+        track_length_m=float(metadata["track_length_m"]),
+        complex_start_distance_m=float(metadata["complex_start_distance_m"]),
+        complex_end_distance_m=float(metadata["complex_end_distance_m"]),
+        phase_start_distance_m=phase.start_distance_m,
+        phase_end_distance_m=phase.end_distance_m,
+        apex_distance_m=float(metadata["apex_distance_m"]),
         phase_time_s=phase_time,
         entry_speed_kph=float(window.speed_kph.iloc[0]),
         minimum_speed_kph=float(window.speed_kph.min()),
         exit_speed_50m_kph=_nearest_value(trace, min(trace.distance_m.max(), end + 50), "speed_kph"),
         exit_speed_100m_kph=_nearest_value(trace, min(trace.distance_m.max(), end + 100), "speed_kph"),
-        braking_onset_m=float(brake_rows.distance_m.iloc[0] - start) if len(brake_rows) else 0.0,
+        braking_onset_distance_m=float(brake_rows.distance_m.iloc[0]) if len(brake_rows) else None,
+        braking_onset_from_complex_start_m=(
+            float(brake_rows.distance_m.iloc[0] - metadata["complex_start_distance_m"]) if len(brake_rows) else None
+        ),
         braking_length_m=float(brake_rows.distance_m.iloc[-1] - brake_rows.distance_m.iloc[0]) if len(brake_rows) > 1 else 0.0,
         throttle_pickup_m=float(throttle_rows.distance_m.iloc[0] - start) if len(throttle_rows) else end - start,
         full_throttle_fraction=full_throttle,
@@ -1320,7 +1423,7 @@ def build_paired_deltas(features: pd.DataFrame, treatment_season: int = 2026, re
     ]
     measures = [
         "phase_time_s", "minimum_speed_kph", "exit_speed_50m_kph", "exit_speed_100m_kph",
-        "braking_onset_m", "braking_length_m", "full_throttle_fraction"
+        "braking_onset_from_complex_start_m", "braking_length_m", "full_throttle_fraction"
     ]
     geometry = [
         "mean_curvature_per_m", "peak_curvature_per_m", "curvature_change_per_m2",
@@ -1575,7 +1678,8 @@ from spa_calibration.pipeline import build_corpus_from_fixture_bundle
 def test_fixture_bundle_builds_2025_2026_pairs_and_2024_controls(tmp_path: Path) -> None:
     manifest = build_corpus_from_fixture_bundle(
         Path("data/fixtures/pipeline-openf1-bundle.json"),
-        geometry_root=Path("data/geometry"),
+        circuits_config=Path("config/circuits.yaml"),
+        eligibility_path=Path("manifests/circuit-year-eligibility.json"),
         output=tmp_path,
         generated_at=datetime(2026, 7, 14, tzinfo=UTC),
     )
@@ -1679,12 +1783,14 @@ async def fetch_lap_channels(client: OpenF1Client, session_key: int, lap: dict) 
 The orchestration function must use this exact acceptance and write sequence:
 
 ```python
-def build_corpus_from_bundles(bundles, geometry_root: Path, output: Path, generated_at: datetime):
+def build_corpus_from_bundles(bundles, circuits_config: Path, output: Path, generated_at: datetime, eligibility: EligibilityEvaluation):
+    circuit_rows = yaml.safe_load(circuits_config.read_text())["circuits"]
     lap_rows, trace_rows, phase_rows, feature_rows = [], [], [], []
     source_checksums = {}
     for session_bundle in bundles:
         circuit_id = session_bundle["event"]["circuit_id"]
-        track = load_canonical_track(circuit_id, geometry_root / f"{circuit_id}.csv")
+        geometry_row = circuit_rows[circuit_id]
+        track = load_canonical_track(circuit_id, Path(geometry_row["geometry"]), geometry_row)
         drivers = {int(row["driver_number"]): row for row in session_bundle["drivers"]}
         for lap_bundle in session_bundle["lap_bundles"]:
             lap = lap_bundle["lap"]
@@ -1693,18 +1799,20 @@ def build_corpus_from_bundles(bundles, geometry_root: Path, output: Path, genera
             coupled = couple_channels(lap_bundle["car_data"], lap_bundle["location"], start)
             projected = project_locations_to_track(coupled, track)
             aligned = align_progress_to_track(projected, track)
-            trace = resample_aligned_trace(aligned, track.length_m, 5)
+            raw_coverage = measure_raw_source_coverage(coupled, aligned, required_channels=eligibility.required_channels(circuit_id, session_bundle["event"]["season"]))
             quality = classify_lap(
-                float(lap["lap_duration"]), trace,
+                float(lap["lap_duration"]), aligned,
                 LapContext(
                     rainfall=_rainfall_during(session_bundle["weather"], start, end),
                     race_control_flags=_flags_during(session_bundle["race_control"], start, end),
                     is_pit_out=bool(lap.get("is_pit_out_lap")),
-                    aborted=float(trace.progress.iloc[-1]) < .94,
+                    aborted=raw_coverage.progress_end < .94,
+                    raw_coverage=raw_coverage,
                 ),
             )
             if not quality.accepted:
                 continue
+            trace = resample_aligned_trace(aligned, track, 5)
             driver = drivers[int(lap["driver_number"])]
             lap_slug = f"{session_bundle['event']['season']}-{session_bundle['session']['meeting_key']}-{session_bundle['session']['session_key']}-{lap['driver_number']}-{lap['lap_number']}"
             trace = trace.assign(lap_slug=lap_slug, circuit_id=circuit_id)
@@ -1712,7 +1820,7 @@ def build_corpus_from_bundles(bundles, geometry_root: Path, output: Path, genera
             for spec in load_complex_specs(circuit_id):
                 phases.extend(detect_complex_phases(trace, spec, lap_slug, circuit_id))
             features = [
-                extract_phase_features(trace, phase, metadata_for_phase(session_bundle, driver, quality, phase))
+                extract_phase_features(trace, phase, metadata_for_phase(session_bundle, driver, quality, phase, track))
                 for phase in phases
             ]
             lap_rows.append(lap_record_row(session_bundle, lap_bundle, driver, quality, lap_slug))
@@ -1755,16 +1863,20 @@ def complex_metadata(circuit_id: str, complex_id: str, manifest_path: Path = Pat
         "entry_straight_m": float(row["entry_straight_m"]),
         "exit_straight_m": float(row["exit_straight_m"]),
         "sector": int(row["sector"]),
+        "complex_start_distance_m": float(row["start_distance_m"]),
+        "complex_end_distance_m": float(row["end_distance_m"]),
+        "apex_distance_m": float(row["apex_hint_m"]),
     }
 
 
-def metadata_for_phase(session_bundle, driver, quality, phase):
+def metadata_for_phase(session_bundle, driver, quality, phase, track):
     event = session_bundle["event"]
     return {
         "season": int(event["season"]),
         "team_name": driver.get("team_name") or "Unknown team",
         "driver_acronym": driver.get("name_acronym") or str(driver["driver_number"]),
         "quality_weight": quality.score,
+        "track_length_m": track.length_m,
         **complex_metadata(event["circuit_id"], phase.complex_id),
     }
 
@@ -1784,6 +1896,8 @@ def lap_record_row(session_bundle, lap_bundle, driver, quality, lap_slug):
         "circuit_id": event["circuit_id"],
         "session_name": event["session_name"],
         "session_segment": lap.get("segment", "UNKNOWN"),
+        "selection_fallback": bool(lap.get("selection_fallback", False)),
+        "fallback_reason": lap.get("fallback_reason"),
         "driver_acronym": driver.get("name_acronym") or str(driver["driver_number"]),
         "driver_name": driver.get("full_name") or driver.get("broadcast_name") or str(driver["driver_number"]),
         "team_name": driver.get("team_name") or "Unknown team",
@@ -1799,22 +1913,36 @@ def lap_record_row(session_bundle, lap_bundle, driver, quality, lap_slug):
     }
 
 
-def select_candidate_laps(laps: list[dict], maximum_per_team: int = 2) -> list[dict]:
+def select_candidate_laps(laps: list[dict], session_name: str, maximum_per_team: int = 2) -> list[dict]:
+    preferred = ["SQ3", "SQ2", "SQ1"] if session_name == "Sprint Qualifying" else ["Q3", "Q2", "Q1"]
     valid = [row for row in laps if row.get("date_start") and row.get("lap_duration") and not row.get("is_pit_out_lap")]
-    valid.sort(key=lambda row: float(row["lap_duration"]))
-    selected, team_counts = [], {}
-    for row in valid:
-        team = str(row.get("team_name") or row.get("driver_number"))
-        if team_counts.get(team, 0) >= maximum_per_team:
-            continue
-        selected.append(row)
-        team_counts[team] = team_counts.get(team, 0) + 1
+    selected: list[dict] = []
+    team_counts: dict[str, int] = {}
+    for segment_index, segment in enumerate(preferred):
+        candidates = sorted(
+            (row for row in valid if row.get("segment") == segment),
+            key=lambda row: float(row["lap_duration"]),
+        )
+        for row in candidates:
+            team = str(row.get("team_name") or row.get("driver_number"))
+            if team_counts.get(team, 0) >= maximum_per_team:
+                continue
+            enriched = {
+                **row,
+                "selection_fallback": segment_index > 0,
+                "fallback_reason": None if segment_index == 0 else f"no eligible {preferred[0]} lap for profile",
+            }
+            selected.append(enriched)
+            team_counts[team] = team_counts.get(team, 0) + 1
+        if len(selected) >= 12:
+            break
     return selected[:12]
 
 
-def build_corpus_from_fixture_bundle(bundle_path: Path, geometry_root: Path, output: Path, generated_at: datetime):
+def build_corpus_from_fixture_bundle(bundle_path: Path, circuits_config: Path, output: Path, generated_at: datetime, eligibility_path: Path):
     bundles = orjson.loads(bundle_path.read_bytes())
-    return build_corpus_from_bundles(bundles, geometry_root, output, generated_at)
+    eligibility = EligibilityEvaluation.model_validate_json(eligibility_path.read_text())
+    return build_corpus_from_bundles(bundles, circuits_config, output, generated_at, eligibility)
 
 
 async def build_live_corpus(events_path: Path, circuits_path: Path, raw_cache: Path, output: Path, generated_at: datetime):
@@ -1824,16 +1952,22 @@ async def build_live_corpus(events_path: Path, circuits_path: Path, raw_cache: P
     for season in event_config["seasons"]:
         for event in event_config["events"]:
             for session_name in event_config["sessions"]:
-                spec = EventSpec(season, event["circuit_id"], event["country_name"], session_name)
+                spec = EventSpec(
+                    season=season, circuit_id=event["circuit_id"], country_name=event["country_name"],
+                    session_name=session_name, meeting_key=event.get("meeting_key"),
+                    meeting_name=event["meeting_name"], circuit_short_name=event["circuit_short_name"],
+                    event_date_start=datetime.fromisoformat(event["event_date_start"]),
+                    event_date_end=datetime.fromisoformat(event["event_date_end"]),
+                )
                 session_bundle = await fetch_session_bundle(client, spec)
                 drivers = {int(row["driver_number"]): row for row in session_bundle["drivers"]}
                 enriched_laps = [{**lap, "team_name": drivers.get(int(lap["driver_number"]), {}).get("team_name")} for lap in session_bundle["laps"]]
                 lap_bundles = []
-                for lap in select_candidate_laps(enriched_laps):
+                for lap in select_candidate_laps(enriched_laps, session_name=session_name):
                     lap_bundles.append(await fetch_lap_channels(client, session_bundle["session"]["session_key"], lap))
                 session_bundle["lap_bundles"] = lap_bundles
                 bundles.append(session_bundle)
-    return build_corpus_from_bundles(bundles, Path(yaml.safe_load(circuits_path.read_text()).get("geometry_root", "data/geometry")), output, generated_at)
+    return build_corpus_from_bundles(bundles, circuits_path, output, generated_at, evaluate_eligibility(events_path, circuits_path))
 ```
 
 Create a validated complex manifest. Every listed circuit must have at least one complex and the full set of rows must cover all timed corner regions without overlap:
