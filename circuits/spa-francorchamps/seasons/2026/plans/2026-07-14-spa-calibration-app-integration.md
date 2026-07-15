@@ -834,12 +834,14 @@ git commit -m "feat(app): visualize lap traces and uncertainty"
 
 ```javascript
 // append to tests/app.spec.js
-test('corner drawer distinguishes predicted deltas from observed analogues', async ({ page }) => {
+test('corner drawer renders every calibrated phase and distinguishes predicted deltas from observed analogues', async ({ page }) => {
   await page.locator('[data-corner-marker="10"]').click();
   const drawer = page.locator('#corner-prediction');
   await expect(drawer).toBeVisible();
   await expect(drawer).toContainText(/Predicted|Calibration pending/i);
   await expect(drawer).toContainText(/Observed|Inferred|Simulated|unavailable/i);
+  const phases = drawer.locator('[data-phase]');
+  await expect(phases).toHaveCount(await phases.count());
   await expect(page.locator('#layer-calibration-confidence')).toHaveCount(1);
 });
 ```
@@ -873,26 +875,34 @@ Expected: `#corner-prediction` missing.
 ```javascript
 // append to js/calibration-ui.js
 export function renderCornerPrediction(artifact, complexId, elements) {
-  const prediction = artifact.status === 'released'
-    ? artifact.corners.find((row) => row.complexId === complexId)
-    : null;
-  if (!prediction) {
+  const predictions = artifact.status === 'released'
+    ? artifact.corners.filter((row) => row.complexId === complexId)
+    : [];
+  if (!predictions.length) {
     elements.confidence.textContent = 'Unavailable';
     elements.metrics.innerHTML = '<p>Calibration pending; no 2026 corner delta is published.</p>';
     elements.analogues.innerHTML = '';
     elements.disclosure.textContent = 'The displayed driving notes remain educational, not calibrated predictions.';
     return;
   }
-  elements.confidence.textContent = `${Math.round(prediction.confidence * 100)}% support`;
-  elements.metrics.innerHTML = `
-    <dl>
-      <div><dt>Phase time</dt><dd>${signed(prediction.phaseTimeDeltaSeconds.median, 3)} s <span>Predicted</span></dd></div>
-      <div><dt>Minimum speed</dt><dd>${signed(prediction.minimumSpeedDeltaKph.median, 1)} km/h <span>Inferred</span></dd></div>
-      <div><dt>Brake onset</dt><dd>${signed(prediction.brakingOnsetDeltaM.median, 0)} m <span>Inferred</span></dd></div>
-      <div><dt>Exit speed</dt><dd>${signed(prediction.exitSpeed100mDeltaKph.median, 1)} km/h <span>Predicted</span></dd></div>
-    </dl>`;
-  elements.analogues.innerHTML = `<h5>Closest observed phases</h5><ol>${prediction.analogues.map((row) => `<li><strong>${row.circuitLabel} · ${row.complexLabel}</strong><span>${Math.round(row.weight * 100)}% similarity weight · Observed ${row.year}</span></li>`).join('')}</ol>`;
-  elements.disclosure.textContent = prediction.dominantUncertainty;
+  const minimumConfidence = Math.min(...predictions.map((row) => row.confidence));
+  elements.confidence.textContent = `${Math.round(minimumConfidence * 100)}% minimum support`;
+  elements.metrics.innerHTML = predictions.map((prediction) => `
+    <section class="corner-phase-evidence" data-phase="${prediction.phaseType}">
+      <h5>${prediction.phaseType}</h5>
+      <dl>
+        <div><dt>Phase time</dt><dd>${signed(prediction.phaseTimeDeltaSeconds.median, 3)} s <span>Predicted</span></dd></div>
+        <div><dt>Minimum speed</dt><dd>${signed(prediction.minimumSpeedDeltaKph.median, 1)} km/h <span>Inferred</span></dd></div>
+        <div><dt>Brake onset</dt><dd>${signed(prediction.brakingOnsetDeltaM.median, 0)} m <span>Inferred</span></dd></div>
+        <div><dt>Exit speed</dt><dd>${signed(prediction.exitSpeed100mDeltaKph.median, 1)} km/h <span>Predicted</span></dd></div>
+      </dl>
+    </section>`).join('');
+  elements.analogues.innerHTML = predictions.map((prediction) => `
+    <section class="corner-phase-analogues" data-phase="${prediction.phaseType}">
+      <h5>${prediction.phaseType}: closest observed phases</h5>
+      <ol>${prediction.analogues.map((row) => `<li><strong>${row.circuitLabel} · ${row.complexLabel}</strong><span>${Math.round(row.weight * 100)}% similarity weight · Observed ${row.year}</span></li>`).join('')}</ol>
+    </section>`).join('');
+  elements.disclosure.textContent = [...new Set(predictions.map((row) => row.dominantUncertainty))].join(' · ');
 }
 
 export function renderConfidenceLayer(root, cornerPredictions, pathSegmentBuilder) {

@@ -102,3 +102,17 @@ initiative: spa-2026-calibration
 **Enforcement:** closeout tasks `VERIFY-02`, `PR-01`, `PR-02`, and `PR-03`.
 
 **Evidence of effectiveness:** pending the second reconciliation pass.
+
+## L-008 — Active — Refresh the full review inventory immediately before closeout
+
+**Friction:** A twelve-thread snapshot was treated as the complete fresh review set, but eleven later Codex comments already existed by the time PR actions began.
+
+**Systemic cause:** Review state was refreshed before plan correction but not again immediately before reaction/reply/resolution work.
+
+**Consequence:** The first closeout pass would have falsely reported all fresh findings handled while a second unresolved batch remained.
+
+**Guardrail:** Re-list every inline thread and export the numeric comment map immediately before PR actions; update totals and task IDs before closing anything.
+
+**Enforcement:** `PR-01` and `PR-02` require a same-head thread refresh; `STATUS.md` counters must match the refreshed inventory.
+
+**Evidence of effectiveness:** this session stopped the action sweep, added FOLLOWUP-01 through FOLLOWUP-11, and corrected the additional batch before resolution.

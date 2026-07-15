@@ -1,6 +1,0 @@
-Traceback (most recent call last):
-  File "/tmp/apply_followup.py", line 69, in <module>
-    replace_exact(DATA, "    result = resample_aligned_trace(trace, track, 5)\n", "    result = resample_aligned_trace(trace, track(), 5)\n")
-  File "/tmp/apply_followup.py", line 23, in replace_exact
-    raise RuntimeError(f"{path}: expected {expected} matches, found {count}: {old[:80]!r}")
-RuntimeError: /home/runner/work/race-lab/race-lab/circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md: expected 1 matches, found 0: '    result = resample_aligned_trace(trace, track, 5)\n'

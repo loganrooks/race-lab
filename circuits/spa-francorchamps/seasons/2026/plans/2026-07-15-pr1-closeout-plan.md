@@ -235,3 +235,36 @@ bash scripts/verify.sh
 ## Completion definition
 
 PR #1 closeout is complete only when all twelve fresh findings have documented dispositions, the plan package has no known cross-plan contradictions, canonical verification passes, all required PR actions are individually accounted for, one final review has no valid blocking findings, the provisional `1:40.4` estimate remains suppressed, and no production calibration functionality has entered the planning-only PR.
+
+### FOLLOWUP-01 — Accept the documented no-new-lesson sentinel
+- [x] Accept both `**Lessons review:** no-new-lesson` and `lessons_reviewed: no-new-lesson` with a regression test.
+
+### FOLLOWUP-02 — Instantiate the canonical-track fixture
+- [x] Call `track()` in the resampling test.
+
+### FOLLOWUP-03 — Preserve discrete sector labels
+- [x] Use a previous-sample lookup rather than continuous interpolation for canonical sectors.
+
+### FOLLOWUP-04 — Complete feature-test metadata
+- [x] Supply required track, complex, and apex distances.
+
+### FOLLOWUP-05 — Propagate corpus eligibility checksums
+- [x] Require and persist source-eligibility, circuit-year, and lap-selection checksums through every corpus builder.
+
+### FOLLOWUP-06 — Charge ERS energy on the first segment
+- [x] Align deploy/regen samples to all `n - 1` physical segments and suppress any post-finish sample.
+
+### FOLLOWUP-07 — Use produced phase-distance field names
+- [x] Serialize `phase_start_distance_m` and `phase_end_distance_m`.
+
+### FOLLOWUP-08 — Reject unsupported prediction statuses
+- [x] Enforce the shared `pending | failed-validation | released` enum in Python.
+
+### FOLLOWUP-09 — Render every phase in a selected complex
+- [x] Filter and render all matching phase evidence and analogue groups.
+
+### FOLLOWUP-10 — Preserve season-specific event windows
+- [x] Confirm the current event manifest already supplies season-specific windows; no further plan change required.
+
+### FOLLOWUP-11 — Synchronize reviewed-head and CI evidence
+- [x] Replace stale status evidence with the directly observed corrected head and workflow result before claiming CI.

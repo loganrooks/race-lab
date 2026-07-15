@@ -912,18 +912,28 @@ def _derive_controls(speed: np.ndarray, distance: np.ndarray) -> tuple[np.ndarra
 def _integrate_battery(
     dt: np.ndarray, deploy_kw: np.ndarray, regen_kw: np.ndarray, parameters: VehicleParameters,
 ) -> tuple[np.ndarray, np.ndarray]:
+    if len(dt) != len(deploy_kw) or len(dt) != len(regen_kw):
+        raise ValueError("energy channels must align with trace samples")
     battery = np.empty(len(dt))
     feasible_deploy = deploy_kw.copy()
     battery[0] = parameters.initial_battery_kj
-    for index in range(1, len(dt)):
-        available_power_kw = max(0.0, (battery[index - 1] - parameters.battery_reserve_kj) / max(dt[index], 1e-9) + regen_kw[index])
-        feasible_deploy[index] = min(feasible_deploy[index], available_power_kw)
-        battery[index] = min(
-            parameters.energy_window_kj,
-            battery[index - 1] + (regen_kw[index] - feasible_deploy[index]) * dt[index],
+    for sample_index in range(1, len(dt)):
+        segment_index = sample_index - 1
+        segment_dt = dt[sample_index]
+        available_power_kw = max(
+            0.0,
+            (battery[sample_index - 1] - parameters.battery_reserve_kj) / max(segment_dt, 1e-9)
+            + regen_kw[segment_index],
         )
-        if battery[index] < parameters.battery_reserve_kj - 1e-6:
+        feasible_deploy[segment_index] = min(feasible_deploy[segment_index], available_power_kw)
+        battery[sample_index] = min(
+            parameters.energy_window_kj,
+            battery[sample_index - 1]
+            + (regen_kw[segment_index] - feasible_deploy[segment_index]) * segment_dt,
+        )
+        if battery[sample_index] < parameters.battery_reserve_kj - 1e-6:
             raise PhysicalFeasibilityError("ERS reserve violated")
+    feasible_deploy[-1] = 0.0  # no post-finish segment
     return battery, feasible_deploy
 
 
@@ -1695,8 +1705,8 @@ def build_corner_predictions(
         results.append({
             "complexId": feature.complex_id,
             "phaseType": feature.phase_type,
-            "startProgress": float(feature.start_distance_m / feature.track_length_m),
-            "endProgress": float(feature.end_distance_m / feature.track_length_m),
+            "startProgress": float(feature.phase_start_distance_m / feature.track_length_m),
+            "endProgress": float(feature.phase_end_distance_m / feature.track_length_m),
             "confidence": confidence,
             "phaseTimeDeltaSeconds": interval_dict(phase_time),
             "minimumSpeedDeltaKph": interval_dict(minimum_speed),
@@ -1907,6 +1917,8 @@ def validate_prediction_semantics(
     if artifact.get("schemaVersion") != SCHEMA_VERSION:
         raise ValueError("unsupported prediction schema")
     status = artifact.get("status")
+    if status not in {"pending", "failed-validation", "released"}:
+        raise ValueError("unsupported prediction status")
     gates_passed = bool(artifact.get("validation", {}).get("release_gates", {}).get("passed"))
     if status != "released":
         if artifact.get("fieldBest") is not None or artifact.get("teams") or artifact.get("corners"):

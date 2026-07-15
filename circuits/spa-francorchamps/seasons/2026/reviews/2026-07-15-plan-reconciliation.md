@@ -475,3 +475,21 @@ All twelve findings were verified against the reviewed snippets and accepted. Th
 **Horizontal review:** Plan A fields consumed by Plan B, Plan B artifact fields consumed by Plan C, all release predicates, scenario identity, attempt count, complete-profile semantics, and fail-closed states were reviewed together. No production calibration functionality was implemented. The provisional `1:40.4` estimate remains suppressed.
 
 **PR action state at publication:** reactions pending; inline replies pending; twelve fresh threads pending resolution until the corrected commit is pushed and verified.
+
+## D. Later Codex review batch discovered during PR-action refresh
+
+A refreshed PR comment inventory exposed eleven additional findings submitted after the earlier twelve-comment snapshot. All were re-evaluated against the current head rather than assumed to be part of the prior batch.
+
+| Task | Finding | Disposition | Resolution |
+|---|---|---|---|
+| FOLLOWUP-01 | Accept documented no-new-lesson marker | accepted | validator and regression test accept both documented forms |
+| FOLLOWUP-02 | Instantiate test track before resampling | accepted | the test calls `track()` |
+| FOLLOWUP-03 | Charge ERS deployment on first segment | accepted | energy channels are aligned to all physical segments |
+| FOLLOWUP-04 | Read produced phase-distance fields | accepted | corner serialization reads `phase_start_distance_m` / `phase_end_distance_m` |
+| FOLLOWUP-05 | Supply corpus eligibility checksums | accepted | checksums are required through writers and builders |
+| FOLLOWUP-06 | Treat sectors as discrete labels | accepted | previous-sample lookup preserves integer sectors |
+| FOLLOWUP-07 | Render every phase for selected complex | accepted | drawer filters and renders all phase rows |
+| FOLLOWUP-08 | Fill required feature metadata | accepted | test fixture supplies all distance metadata |
+| FOLLOWUP-09 | Use season-specific event windows | accepted, already satisfied | current manifest and live builder select per-season windows |
+| FOLLOWUP-10 | Reject unsupported artifact statuses | accepted | Python semantic validation enforces the shared enum |
+| FOLLOWUP-11 | Record reviewed head before claiming CI | accepted | status evidence is synchronized and scoped to the observed material head |

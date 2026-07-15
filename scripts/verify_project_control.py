@@ -268,7 +268,11 @@ def validate_required_record_updates(
         raise ValidationError("Spa specification changes require DECISIONS.md")
     if any("/reviews/" in path for path in changed):
         no_new_lesson = bool(
-            re.search(r"Lessons review:\*\*\s*no-new-lesson", activity_text, re.IGNORECASE)
+            re.search(
+                r"(?:Lessons review:\*\*\s*no-new-lesson|lessons_reviewed:\s*no-new-lesson)",
+                activity_text,
+                re.IGNORECASE,
+            )
         )
         if lessons not in changed and not no_new_lesson:
             raise ValidationError(

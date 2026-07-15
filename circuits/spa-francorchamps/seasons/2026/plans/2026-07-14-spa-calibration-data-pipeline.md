@@ -1028,7 +1028,7 @@ def test_resampling_emits_fixed_distance_grid_and_interpolates_channels() -> Non
         "brake": [1, 0, 0],
         "gear": [2, 3, 4],
     })
-    result = resample_aligned_trace(trace, track=track, spacing_m=5)
+    result = resample_aligned_trace(trace, track=track(), spacing_m=5)
     assert result["distance_m"].tolist() == [0, 5, 10, 15, 20]
     assert result.loc[result.distance_m == 5, "speed_kph"].item() == 125
     assert result.loc[result.distance_m == 5, "gear"].item() == 2
@@ -1223,9 +1223,12 @@ def resample_aligned_trace(trace: pd.DataFrame, track: CanonicalTrack, spacing_m
     for column, values in {
         "x_m": track.x_m, "y_m": track.y_m, "elevation_m": track.elevation_m,
         "heading_rad": track.heading_rad, "curvature_per_m": track.curvature_per_m,
-        "gradient": track.gradient, "sector": track.sector,
+        "gradient": track.gradient,
     }.items():
         output[column] = np.interp(grid, track.distance_m, values)
+    sector_indices = np.searchsorted(track.distance_m, grid, side="right") - 1
+    sector_indices = np.clip(sector_indices, 0, len(track.distance_m) - 1)
+    output["sector"] = np.asarray(track.sector, dtype=int)[sector_indices]
     output["progress"] = np.clip(output.distance_m / track.length_m, 0.0, 1.0)
     assert output.progress.is_monotonic_increasing
     assert output.progress.iloc[0] == 0.0 and output.progress.iloc[-1] == 1.0
@@ -1469,7 +1472,8 @@ def test_feature_extraction_uses_fixed_downstream_exit_speeds() -> None:
     feature = extract_phase_features(trace, phase, metadata={
         "season": 2026, "team_name": "Team", "driver_acronym": "DRV",
         "archetype": "slow-hairpin", "sector": 1, "entry_straight_m": 300, "exit_straight_m": 500,
-        "quality_weight": .95,
+        "track_length_m": 150, "complex_start_distance_m": 0, "complex_end_distance_m": 150,
+        "apex_distance_m": 75, "quality_weight": .95,
     })
     assert feature.minimum_speed_kph == 90
     assert feature.exit_speed_50m_kph == 230
@@ -1699,6 +1703,9 @@ def write_corpus(
     features: pd.DataFrame,
     source_cutoff: datetime,
     source_checksums: dict[str, str],
+    source_eligibility_checksum: str,
+    circuit_year_eligibility_checksum: str,
+    lap_selection_checksum: str,
     generated_at: datetime,
 ) -> CorpusManifest:
     checksums = {
@@ -1718,6 +1725,9 @@ def write_corpus(
         feature_count=len(features),
         source_checksums=dict(sorted(source_checksums.items())),
         artifact_checksums=checksums,
+        source_eligibility_checksum=source_eligibility_checksum,
+        circuit_year_eligibility_checksum=circuit_year_eligibility_checksum,
+        lap_selection_checksum=lap_selection_checksum,
     )
     payload = manifest.model_dump_json(indent=2).encode()
     (output / "provenance.json").write_bytes(payload)
@@ -1933,7 +1943,17 @@ async def fetch_lap_channels(client: OpenF1Client, session_key: int, lap: dict) 
 The orchestration function must use this exact acceptance and write sequence:
 
 ```python
-def build_corpus_from_bundles(bundles, circuits_config: Path, output: Path, generated_at: datetime, eligibility: EligibilityEvaluation):
+def build_corpus_from_bundles(
+    bundles,
+    circuits_config: Path,
+    output: Path,
+    generated_at: datetime,
+    eligibility: EligibilityEvaluation,
+    *,
+    source_eligibility_checksum: str,
+    circuit_year_eligibility_checksum: str,
+    lap_selection_checksum: str,
+):
     circuit_rows = yaml.safe_load(circuits_config.read_text())["circuits"]
     lap_rows, trace_rows, phase_rows, feature_rows = [], [], [], []
     source_checksums = {}
@@ -1991,6 +2011,9 @@ def build_corpus_from_bundles(bundles, circuits_config: Path, output: Path, gene
         features=pd.DataFrame(feature_rows),
         source_cutoff=max(datetime.fromisoformat(row["session"]["date_start"]) for row in bundles),
         source_checksums=source_checksums,
+        source_eligibility_checksum=source_eligibility_checksum,
+        circuit_year_eligibility_checksum=circuit_year_eligibility_checksum,
+        lap_selection_checksum=lap_selection_checksum,
         generated_at=generated_at,
     )
 ```
@@ -2093,10 +2116,27 @@ def select_candidate_laps(laps: list[dict], session_name: str, maximum_per_team:
     return selected[:12]
 
 
-def build_corpus_from_fixture_bundle(bundle_path: Path, circuits_config: Path, output: Path, generated_at: datetime, eligibility_path: Path):
+def build_corpus_from_fixture_bundle(
+    bundle_path: Path,
+    circuits_config: Path,
+    output: Path,
+    generated_at: datetime,
+    eligibility_path: Path,
+    circuit_year_eligibility_path: Path,
+    lap_selection_path: Path,
+):
     bundles = orjson.loads(bundle_path.read_bytes())
     eligibility = EligibilityEvaluation.model_validate_json(eligibility_path.read_text())
-    return build_corpus_from_bundles(bundles, circuits_config, output, generated_at, eligibility)
+    return build_corpus_from_bundles(
+        bundles,
+        circuits_config,
+        output,
+        generated_at,
+        eligibility,
+        source_eligibility_checksum=sha256_bytes(eligibility_path.read_bytes()),
+        circuit_year_eligibility_checksum=sha256_bytes(circuit_year_eligibility_path.read_bytes()),
+        lap_selection_checksum=sha256_bytes(lap_selection_path.read_bytes()),
+    )
 
 
 async def build_live_corpus(events_path: Path, circuits_path: Path, raw_cache: Path, output: Path, generated_at: datetime):
@@ -2127,7 +2167,19 @@ async def build_live_corpus(events_path: Path, circuits_path: Path, raw_cache: P
                     lap_bundles.append(await fetch_lap_channels(client, session_bundle["session"]["session_key"], lap))
                 session_bundle["lap_bundles"] = lap_bundles
                 bundles.append(session_bundle)
-    return build_corpus_from_bundles(bundles, circuits_path, output, generated_at, evaluate_eligibility(events_path, circuits_path))
+    eligibility, source_manifest_path, circuit_year_manifest_path, lap_selection_path = evaluate_eligibility(
+        events_path, circuits_path
+    )
+    return build_corpus_from_bundles(
+        bundles,
+        circuits_path,
+        output,
+        generated_at,
+        eligibility,
+        source_eligibility_checksum=sha256_bytes(source_manifest_path.read_bytes()),
+        circuit_year_eligibility_checksum=sha256_bytes(circuit_year_manifest_path.read_bytes()),
+        lap_selection_checksum=sha256_bytes(lap_selection_path.read_bytes()),
+    )
 ```
 
 Create a validated complex manifest. Every listed circuit must have at least one complex and the full set of rows must cover all timed corner regions without overlap:
