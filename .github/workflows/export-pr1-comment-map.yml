@@ -1,0 +1,72 @@
+name: Export PR1 comment map
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  export:
+    if: github.head_ref == 'automation/spa-pr1-closeout-20260715'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - name: Export review comment IDs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+        run: |
+          python - <<'PY'
+          import json, os, re, urllib.request
+          repo = os.environ['GH_REPOSITORY']
+          token = os.environ['GH_TOKEN']
+          rows = []
+          page = 1
+          while True:
+              request = urllib.request.Request(
+                  f'https://api.github.com/repos/{repo}/pulls/1/comments?per_page=100&page={page}',
+                  headers={
+                      'Authorization': f'Bearer {token}',
+                      'Accept': 'application/vnd.github+json',
+                      'X-GitHub-Api-Version': '2022-11-28',
+                  },
+              )
+              with urllib.request.urlopen(request) as response:
+                  batch = json.load(response)
+              if not batch:
+                  break
+              for item in batch:
+                  if item.get('in_reply_to_id') is not None:
+                      continue
+                  body = item.get('body', '')
+                  first = body.splitlines()[0] if body else ''
+                  match = re.search(r'</sub></sub>\s+(.*?)\*\*$', first)
+                  title = match.group(1).strip() if match else first.strip()
+                  rows.append({
+                      'id': item['id'],
+                      'node_id': item['node_id'],
+                      'title': title,
+                      'path': item.get('path'),
+                      'created_at': item.get('created_at'),
+                  })
+              page += 1
+          output = {'repository': repo, 'pull_request': 1, 'comments': rows}
+          os.makedirs('.github/spa-closeout', exist_ok=True)
+          with open('.github/spa-closeout/pr1-comment-map.json', 'w') as handle:
+              json.dump(output, handle, indent=2, sort_keys=True)
+              handle.write('\n')
+          print(f'exported {len(rows)} top-level review comments')
+          PY
+      - name: Commit comment map
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/spa-closeout/pr1-comment-map.json
+          git commit -m 'chore: export PR1 review comment map' || exit 0
+          git push origin HEAD:${{ github.head_ref }}
