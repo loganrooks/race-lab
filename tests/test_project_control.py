@@ -187,6 +187,10 @@ initiative: spa-2026-calibration
             changed,
             activity_text="**Lessons review:** no-new-lesson.",
         )
+        validator.validate_required_record_updates(
+            changed,
+            activity_text="lessons_reviewed: no-new-lesson",
+        )
 
 
 if __name__ == "__main__":

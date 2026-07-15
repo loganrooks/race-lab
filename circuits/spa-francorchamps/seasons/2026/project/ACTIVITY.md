@@ -145,3 +145,23 @@ mutation: append-only
 **Next action:** push the corrected head and complete `PR-01` and `PR-02`.
 
 **Lessons review:** no-new-lesson; horizontal review and fail-closed publication followed existing guardrails.
+
+## A-008 — 2026-07-15T23:15:00Z — Later review batch reconciled
+
+**Evidence status:** reviewed; locally-verified in isolated publication workflow; push and PR actions pending.
+
+**Starting state:** corrected head `b9ffc3a47fd7afcfa09b6f9422f1368bfea4f55c` passed GitHub Actions `Verify` run `29457643476`; the refreshed numeric comment map revealed eleven additional unresolved Codex findings beyond the earlier twelve.
+
+**Work performed:** verified all eleven findings, classified the season-window finding as already satisfied, corrected the other ten contracts, added regression coverage for the documented no-new-lesson sentinel, and extended the closeout/reconciliation/lesson records.
+
+**Files changed:** data, model, and browser plans; project-control validator and tests; closeout plan; reconciliation ledger; status, activity, and lessons records.
+
+**Verification:** canonical `bash scripts/verify.sh` passed in GitHub Actions follow-up publication workflow run `29458295544`; the workflow reruns it after this record finalization.
+
+**Publication / remote actions:** none advanced by this entry; comment counters remain unchanged until authenticated reactions/replies/resolutions are observed.
+
+**Result:** all known review findings now have explicit dispositions and corrections; PR actions remain pending.
+
+**Next action:** run canonical verification, publish one squashed follow-up commit, then rate/reply/resolve the complete comment inventory.
+
+**Lessons review:** new lesson `L-008` recorded.

@@ -5,18 +5,18 @@ phase: pr1-post-reconciliation-closeout
 repository: loganrooks/race-lab
 branch: chore/establish-race-lab-structure
 pull_request: 1
-last_observed_remote_head: 76738fa1a725a0bd507011c77ec19d783dd63408
-last_observed_at: 2026-07-15T22:35:00Z
-evidence_source: github-pr-head-actions-run-29455579091-and-review-threads
-publication_state: ready-to-push
-verification_state: locally-verified-in-publication-workflow
+last_observed_remote_head: b9ffc3a47fd7afcfa09b6f9422f1368bfea4f55c
+last_observed_at: 2026-07-15T23:15:00Z
+evidence_source: github-pr-head-actions-run-29457643476-and-refreshed-review-threads
+publication_state: followup-ready-to-push
+verification_state: ci-confirmed-recorded-head-and-followup-locally-verified
 active_tasks: [PR-01, PR-02, PR-03, PR-04]
-next_action: Publish the corrected head, then rate and reply to all original and fresh comments and resolve the twelve fresh threads.
+next_action: Publish the follow-up correction, then rate and reply to all 23 original and all 23 fresh comments and resolve every fresh thread.
 original_comments_total: 23
 original_comments_rated: 5
 original_comments_replied: 0
 original_comments_resolved: 23
-fresh_comments_total: 12
+fresh_comments_total: 23
 fresh_comments_rated: 0
 fresh_comments_replied: 0
 fresh_comments_resolved: 0
@@ -26,7 +26,7 @@ fresh_comments_resolved: 0
 
 ## Objective
 
-Complete a bounded second reconciliation pass for PR #1, correct the twelve fresh Codex findings, finish the PR-action ledger, obtain one final clean review, and merge the planning package without implementing production calibration functionality.
+Complete the bounded PR #1 review reconciliation, including the later eleven-finding batch, finish the PR-action ledger, obtain one final clean review, and merge the planning package without implementing production calibration functionality.
 
 ## Current state
 
@@ -39,7 +39,8 @@ Complete a bounded second reconciliation pass for PR #1, correct the twelve fres
 - **Remotely observed:** five of the 23 original inline comments had a positive reaction; eighteen remained unrated.
 - **Reviewed:** a fresh Codex review of `1ffaf2d232f6bafd134fafa94ca067683744b639` opened twelve unresolved findings.
 - **Reported but unverified:** a prior PR comment claimed an earlier GitHub Actions verification run passed; no retrievable workflow run was found for `1ffaf2d232f6bafd134fafa94ca067683744b639` during the latest inspection.
-- **Locally verified:** all twelve fresh findings were evaluated and corrected; canonical verification passed in the publication workflow. PR actions remain pending until push.
+- **CI-confirmed:** corrected material head `b9ffc3a47fd7afcfa09b6f9422f1368bfea4f55c` passed GitHub Actions `Verify` run `29457643476`.
+- **Reviewed:** a refreshed inventory found eleven additional Codex findings; all were evaluated and corrected or confirmed already satisfied. PR actions remain pending until the follow-up push.
 
 ## Active work
 
@@ -47,7 +48,7 @@ The active tasks are defined in `../plans/2026-07-15-pr1-closeout-plan.md`. Proj
 
 ## Blockers and risks
 
-- The corrected package still requires remote publication and PR-action completion.
+- The follow-up correction still requires remote publication and PR-action completion.
 - The original reaction sweep is incomplete.
 - Another review should not be requested until the intended corrected head is stable and all local procedural cleanup is complete.
 
@@ -60,8 +61,8 @@ The active tasks are defined in `../plans/2026-07-15-pr1-closeout-plan.md`. Proj
 
 ## Verification and publication
 
-The project-control unit passed targeted and reconstructed canonical verification locally. GitHub Actions workflow `Verify` run `29455470610` also passed for the recorded material head. This confirms the repository-control software checks only; it does not validate the scientific prediction model. The publication state is `pushed`.
+The project-control unit passed targeted and canonical verification. GitHub Actions workflow `Verify` run `29457643476` passed for recorded material head `b9ffc3a47fd7afcfa09b6f9422f1368bfea4f55c`. This confirms the repository-control software checks only; it does not validate the scientific prediction model. The publication state is `pushed`.
 
 ## Next exact action
 
-Publish the verified corrected head, then complete reactions, inline replies, and fresh-thread resolutions before requesting one final review.
+Publish the verified follow-up head, then complete reactions, inline replies, and all fresh-thread resolutions before requesting one final review.
