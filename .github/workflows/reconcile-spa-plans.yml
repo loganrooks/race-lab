@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   reconcile:
@@ -40,7 +41,24 @@ jobs:
         run: python -m pip install --disable-pip-version-check ruff
 
       - name: Apply reconciliation package
-        run: python scripts/reconcile_spa_plans.py
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          python scripts/reconcile_spa_plans.py > /tmp/reconcile.log 2>&1
+          status=$?
+          cat /tmp/reconcile.log
+          if (( status != 0 )); then
+            {
+              echo '### Reconciliation workflow diagnostic'
+              echo
+              echo '```text'
+              cat /tmp/reconcile.log
+              echo '```'
+            } > /tmp/reconcile-comment.md
+            gh pr comment 3 --body-file /tmp/reconcile-comment.md
+            exit "$status"
+          fi
 
       - name: Remove temporary publication files
         run: rm -rf .automation scripts/reconcile_spa_plans.py
