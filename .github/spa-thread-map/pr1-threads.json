@@ -2,6 +2,7 @@
   "pull_request": 1,
   "threads": [
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Clamp the resampling grid to the track length**\n\nFor tracks whose length is not an exact multiple of `spacing_m` and whose remainder is greater than half the spacing, this `np.arange` stop value includes a final grid point past `track_length_m`; line 987 then emits `progress > 1`. That violates the bounded-progress requirement and can make downstream corner/phase lookup consume out-of-track samples, so generate points below the length and append or clip the exact `track_length_m` endpoint.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3588678442,
       "created_at": "2026-07-15T15:38:52Z",
       "is_outdated": true,
@@ -11,6 +12,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Clamp the resampling grid to the track length**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Use keyword arguments for EventSpec**\n\n`EventSpec` is defined earlier in this plan as a Pydantic `BaseModel`, so constructing it with positional arguments raises `TypeError` before the first session can be fetched; the same positional call also appears in the OpenF1 test above. In the live refresh path this prevents building any corpus, so this should be `EventSpec(season=..., circuit_id=..., country_name=..., session_name=...)`.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3588678447,
       "created_at": "2026-07-15T15:38:52Z",
       "is_outdated": true,
@@ -20,6 +22,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Use keyword arguments for EventSpec**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Use raw progress to classify incomplete laps**\n\nBecause `trace` has already been resampled onto a full 0\u20131 lap grid, `trace.progress.iloc[-1]` is always at the end of the generated grid even when the OpenF1 location/car feed stopped early or the lap was aborted. Those incomplete laps will therefore avoid the `incomplete` flag and can enter the calibration corpus, so this check needs to use the pre-resampling aligned/source coverage instead.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3588678453,
       "created_at": "2026-07-15T15:38:52Z",
       "is_outdated": true,
@@ -29,6 +32,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Use raw progress to classify incomplete laps**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Preserve track geometry when resampling traces**\n\n`resample_aligned_trace()` only emits telemetry columns, but the next phase/feature steps read `trace.curvature_per_m` and later `trace.gradient`; after this assignment the corpus build will hit a `KeyError` before any phases or features are produced. The resampled trace needs to interpolate/carry the canonical geometry fields from `track` before calling `detect_complex_phases()` and `extract_phase_features()`.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3588678457,
       "created_at": "2026-07-15T15:38:52Z",
       "is_outdated": true,
@@ -38,6 +42,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Preserve track geometry when resampling traces**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Make lap_time_s match the emitted trace timeline**\n\n`_derive_controls()` sets the first elapsed sample to zero (`np.cumsum(dt) - dt[0]`), so the final `trace.elapsed_s` is `sum(dt) - dt[0]` while this returns `sum(dt)` as `lap_time_s`. Every simulated lap is therefore longer in summary than in the trace/timing table by the first segment duration, which will desynchronize playback and artifact lap times.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3588678462,
       "created_at": "2026-07-15T15:38:52Z",
       "is_outdated": true,
@@ -47,6 +52,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Make lap_time_s match the emitted trace timeline**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Prevent deployment from spending future regen**\n\nFor laps where heavy ERS deployment happens before later braking recovery, this integration clips the battery at `battery_reserve_kj` but leaves `deploy_kw` unchanged, so the trace can keep deploying while pinned at the reserve and effectively borrow energy from future regen. That violates the physical-feasibility gate; deployment should be reduced when the state would cross the reserve rather than hidden by clipping.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3588678468,
       "created_at": "2026-07-15T15:38:52Z",
       "is_outdated": true,
@@ -56,6 +62,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Prevent deployment from spending future regen**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Carry phase distances into Spa feature rows**\n\nThe Plan A `FeatureRecord` schema does not include `apex_distance_m` (nor the start/end/track-length fields used later for corner cards), so Spa features produced by the approved pipeline will not have this attribute and correction-draw construction fails before prediction artifacts can be built. Add these phase-distance fields to the feature schema/output or derive the correction distance from the phase records instead.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3588678474,
       "created_at": "2026-07-15T15:38:53Z",
       "is_outdated": false,
@@ -65,6 +72,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Carry phase distances into Spa feature rows**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Reject incomplete released artifacts in validation**\n\nThe CLI validator only checks the checksum and suppresses `fieldBest` for non-released artifacts, so a checksum-valid artifact with `status: \"released\"` but no `fieldBest` or with failing `validation.release_gates.passed` still prints as valid. Since this command is the release validation entry point, it should enforce the same released-artifact requirements that the browser schema expects.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3588678476,
       "created_at": "2026-07-15T15:38:53Z",
       "is_outdated": true,
@@ -74,6 +82,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Reject incomplete released artifacts in validation**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Avoid emitting a zero-length full-power phase**\n\nBecause the `full-power` anchor is always set to the final sample, the final record also uses the final sample as its end point, producing a zero-length `full-power` phase. When `extract_phase_features()` later processes that phase it sees fewer than two samples and aborts corpus generation for otherwise valid corners, so the full-power phase needs to start at the detected `full_power` index and end at the window end.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3588678480,
       "created_at": "2026-07-15T15:38:53Z",
       "is_outdated": true,
@@ -83,6 +92,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Avoid emitting a zero-length full-power phase**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Store braking onset relative to the corner, not the phase**\n\nFor the `braking-onset` phase emitted above, `start` is already the detected braking onset, so this stores `braking_onset_m` as zero; phases without brake rows also get zero. The paired `delta_braking_onset_m` that drives the validation gate and prediction artifact will therefore be mostly meaningless, so the onset distance should be measured against the corner/complex reference start (or stored as an absolute distance) rather than the phase window start.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3588678485,
       "created_at": "2026-07-15T15:38:53Z",
       "is_outdated": true,
@@ -92,6 +102,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Store braking onset relative to the corner, not the phase**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Aggregate validation by coherent laps**\n\nWhen the held-out frame contains multiple cars/drivers, summing every phase row across the whole circuit turns the lap error into a fleet-wide cumulative delta rather than the error for any one lap. That can inflate or cancel errors depending on how many cars were selected and corrupts the release gates, so validation should aggregate phases per coherent lap/team before computing lap MAE and baseline comparison.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3588678489,
       "created_at": "2026-07-15T15:38:53Z",
       "is_outdated": true,
@@ -101,6 +112,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Aggregate validation by coherent laps**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Apply the learned non-speed corrections**\n\n`predict_spa_team()` requires phase-time, braking-onset, exit-speed, and throttle-fraction correction columns, but `simulate_lap()` only reads `speed_correction_ms`; in cases where the learned 2026 effect is mainly braking later or shortening a phase without changing minimum speed, the generated lap time and controls will ignore that calibration. The dynamics pass needs to translate the other corrections into constraints/objectives or the released lap is not using the fitted model outputs.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3588678490,
       "created_at": "2026-07-15T15:38:53Z",
       "is_outdated": true,
@@ -110,6 +122,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Apply the learned non-speed corrections**"
     },
     {
+      "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Validate artifacts before bundling released status**\n\nThis browser-build path only verifies the checksum; a checksum-valid artifact with `status: 'released'` but failing `validation.release_gates`, missing `fieldBest`, unordered intervals, or stale metadata is emitted unchanged as `CALIBRATION_ARTIFACT` and later rendered as released. This is separate from the CLI validator: the fresh evidence here is that the generator never invokes `validateCalibrationArtifact()` after the checksum succeeds, so the app can publish a gated prediction that the browser contract says must become `Calibration pending`.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3588873521,
       "created_at": "2026-07-15T16:05:22Z",
       "is_outdated": false,
@@ -119,6 +132,7 @@
       "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Validate artifacts before bundling released status**"
     },
     {
+      "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Resolve sessions with a circuit-unique key**\n\nFor events in countries with multiple F1 meetings in the same season, this query is not circuit-unique; the manifest includes Miami as `country_name: United States`, and `resolve_session()` later chooses the latest matching qualifying session. In that scenario the pipeline can fetch a different U.S. circuit and label those laps as Miami before aligning them to Miami geometry, corrupting provenance and cross-circuit training data; include a meeting key/date/circuit discriminator or reject non-unique matches.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3588873527,
       "created_at": "2026-07-15T16:05:22Z",
       "is_outdated": true,
@@ -128,6 +142,7 @@
       "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Resolve sessions with a circuit-unique key**"
     },
     {
+      "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Recompute path distance after changing the line**\n\nWhen the optimizer moves points laterally, the returned line keeps the original `distance_m` while only `x_m`, `y_m`, and curvature change. For any nonzero offset profile, `simulate_lap()` still integrates time and speed over centerline segment lengths rather than the optimized path length, so line, speed, controls, and lap time are no longer physically coupled; recompute cumulative distance/progress from the updated coordinates before simulation.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3588873531,
       "created_at": "2026-07-15T16:05:22Z",
       "is_outdated": true,
@@ -137,6 +152,7 @@
       "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Recompute path distance after changing the line**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Preserve the observed year for analogues**\n\nEvery analogue row is serialized as `year: 2026`, even though the nearest-neighbour evidence is drawn from training features that can be 2024/2025 control or reference laps. The corner drawer displays this as an observed analogue year, so released artifacts would misstate source provenance and make historical evidence look like 2026 observations; carry the source season/year from `training_features` instead.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3588873536,
       "created_at": "2026-07-15T16:05:23Z",
       "is_outdated": true,
@@ -146,6 +162,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Preserve the observed year for analogues**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Normalize OpenF1 reference channel names**\n\nThe existing OpenF1 reference generator emits historical trace samples as `speed`, `throttle`, and `brake`, but this adapter passes `reference.trace` through unchanged while `sampleTrace()` and the telemetry chart read `speedKph`, `throttlePct`, and `brakePct`. When a bundled historical Spa reference is selected, the map can move on the reference route but the telemetry values and chart paths become `undefined`/`NaN`, breaking the source synchronization this plan is meant to guarantee; map the legacy channel names before storing the source trace.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3588873540,
       "created_at": "2026-07-15T16:05:23Z",
       "is_outdated": true,
@@ -155,6 +172,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Normalize OpenF1 reference channel names**"
     },
     {
+      "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Require temporal gates before release**\n\nI checked the model plan and only the leave-one-circuit-out fold report feeds `release_gates.passed`, while the newly added recommendations require rolling-origin validation to block post-event data from entering a pre-event forecast. In any corpus that includes current-season data after an evaluated event's forecast cutoff, this can still return passing release gates and let `build_prediction_artifact()` publish a released artifact without a temporal leakage check; include rolling-origin results in this gate decision.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3588873544,
       "created_at": "2026-07-15T16:05:23Z",
       "is_outdated": false,
@@ -164,6 +182,7 @@
       "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Require temporal gates before release**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Preserve joint outcome uncertainty across draws**\n\nEach outcome is fit as a separate `InferenceData`, so reusing the same integer `indices` across `fit.outcomes.items()` does not identify a shared posterior draw and cannot preserve covariance between phase time, speed, braking, and throttle corrections. For corners where these effects are correlated, the composed lap samples pair unrelated marginal draws and distort the field-best intervals; fit/sample a joint model or explicitly model the cross-outcome covariance before combining corrections.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3588873551,
       "created_at": "2026-07-15T16:05:23Z",
       "is_outdated": true,
@@ -173,6 +192,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Preserve joint outcome uncertainty across draws**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Use configured geometry paths when loading tracks**\n\nThe loader ignores `config/circuits.yaml` entries and hard-codes `geometry_root / f\"{circuit_id}.csv\"`; this conflicts with the same plan's per-circuit geometry manifest, including Spa's non-CSV adapter path and source/license metadata. In live or fixture builds for any circuit whose geometry is not exactly under that root with the derived filename, corpus generation either fails or bypasses the declared provenance, so resolve tracks through the configured `geometry` field instead.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3588873557,
       "created_at": "2026-07-15T16:05:23Z",
       "is_outdated": true,
@@ -182,6 +202,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Use configured geometry paths when loading tracks**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Make canonical verification pass with ruff installed**\n\nI ran the required `bash scripts/verify.sh`; in this checkout it fails at `ruff check .` because tracked pre-existing `tools/build_reference_model.py` has unused imports. Since this commit introduces the canonical verifier, running ruff over the whole repository makes the documented verification command fail for reasons outside the new Race Lab files whenever ruff is present; either fix the existing lint errors or scope/configure ruff so the canonical check is green.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3588873563,
       "created_at": "2026-07-15T16:05:23Z",
       "is_outdated": true,
@@ -191,6 +212,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Make canonical verification pass with ruff installed**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Filter candidate laps by declared qualifying segment**\n\nThis selection accepts every non-pit-out lap in the qualifying session and then sorts globally by lap time, without preferring Q3/SQ3 or recording an explicit fallback flag. When Q3 data for a competitive car is missing, deleted, or slower because of traffic/flags, Q1/Q2 laps can enter the calibration corpus as ordinary accepted laps, violating the plan's Q3-first data-quality rule and contaminating paired deltas with undeclared fallback data.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3588873567,
       "created_at": "2026-07-15T16:05:23Z",
       "is_outdated": true,
@@ -200,6 +222,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Filter candidate laps by declared qualifying segment**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Require release provenance fields before checksumming**\n\nA released artifact can be built with only `modelVersion` and `sourceCutoff` in `provenance`\u2014the tests above do exactly that\u2014so the checksum can bless an artifact that omits the training manifest checksum, random seed, regulation identifiers, and model hyperparameters required for reproducibility. For released artifacts, validate those provenance fields before computing the checksum rather than storing whatever minimal dict the caller supplies.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3588873575,
       "created_at": "2026-07-15T16:05:23Z",
       "is_outdated": false,
@@ -209,6 +232,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Require release provenance fields before checksumming**"
     },
     {
+      "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Preserve lap_slug in validation joins**\n\nIn any LOCO fold, this projection drops `lap_slug` from both `joined` and `baseline_joined`, but the next lines group both frames by `lap_slug`. That makes `score_fold()` raise `KeyError` instead of producing lap/profile validation metrics, so the release gates cannot be evaluated and the reconciled coherent-lap scoring requirement is not actually implementable.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3590511747,
       "created_at": "2026-07-15T20:24:47Z",
       "is_outdated": false,
@@ -218,6 +242,7 @@
       "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Preserve lap_slug in validation joins**"
     },
     {
+      "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Run full release validation before checksumming**\n\nWhen `release_gates.passed` is true, the builder only checks reports and provenance before finalizing the checksum; malformed `fieldBest` intervals, unsupported scenarios, or stale timestamps are only caught if a separate caller remembers to run `validate_prediction_artifact()`. If the artifact writer serializes this return value directly, it can create a checksum-finalized `released` artifact that the release contract says must be rejected before finalization.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3590511751,
       "created_at": "2026-07-15T20:24:47Z",
       "is_outdated": true,
@@ -227,6 +252,7 @@
       "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Run full release validation before checksumming**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Populate event metadata before live refresh**\n\nWith the `events.yaml` rows shown earlier in this plan, most events only define `circuit_id` and `country_name`, so `build_live_corpus()` raises `KeyError` on these required fields before it can resolve Melbourne, Shanghai, Suzuka, and the other non-Miami sessions. That blocks the live corpus refresh path that is supposed to establish source cutoffs and provenance; either make the fields optional when `meeting_key` is present or require complete name/date/circuit metadata for every configured event.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3590511755,
       "created_at": "2026-07-15T20:24:47Z",
       "is_outdated": true,
@@ -236,6 +262,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Populate event metadata before live refresh**"
     },
     {
+      "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Carry every configured release gate into validation**\n\nThe canonical `release-gates.yaml` above includes 95% coverage, WIS/CRPS, rolling-origin, physical-feasibility, and identifiability requirements, but this dataclass only carries the point gates plus 80% coverage. When Plan B loads/evaluates this config, those mandatory gates are either a `TypeError` on extra YAML keys or are filtered out and never contribute to `passed`, allowing a released artifact without the required uncertainty, temporal, or feasibility evidence.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3590511761,
       "created_at": "2026-07-15T20:24:47Z",
       "is_outdated": false,
@@ -245,6 +272,7 @@
       "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Carry every configured release gate into validation**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Call geometry loader with its declared arguments**\n\nIn pipeline orchestration, this calls `load_canonical_track` with a third `geometry_row` argument, but the loader specified in Task 4 accepts only `(circuit_id, csv_path)`. The first fixture or live corpus build that reaches this path will raise `TypeError`, so no paired corpus or provenance manifests can be generated until the signature and call are reconciled.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3590511764,
       "created_at": "2026-07-15T20:24:47Z",
       "is_outdated": true,
@@ -254,6 +282,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Call geometry loader with its declared arguments**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Reconcile control-constraint solver argument**\n\n`simulate_lap()` always passes `control_constraints` into `_solve_speed_envelope`, but the function defined above accepts only four parameters. The first lap simulation will raise `TypeError` before physical feasibility, ERS reserve, or corrected trace checks run, blocking Plan B prediction generation.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3590511766,
       "created_at": "2026-07-15T20:24:47Z",
       "is_outdated": false,
@@ -263,6 +292,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Reconcile control-constraint solver argument**"
     },
     {
+      "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Validate pending artifacts before bundling**\n\nWhen the input artifact declares `status: 'pending'`, this branch skips both checksum verification and `validateCalibrationArtifact()`. A malformed pending/failed artifact that still contains `fieldBest` or team predictions would be written into `js/calibration-data.js` instead of being replaced by the frozen pending fallback, which violates the no-unreleased-central-estimate browser contract.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3590511768,
       "created_at": "2026-07-15T20:24:47Z",
       "is_outdated": true,
@@ -272,6 +302,7 @@
       "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Validate pending artifacts before bundling**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Remove legacy telemetry keys after normalization**\n\nFor historical OpenF1 references using legacy `speed/throttle/brake`, spreading the original sample keeps those raw fields on the `TraceSource` while adding normalized `speedKph/throttlePct/brakePct`. That contradicts the adapter-boundary contract and leaves downstream/debug consumers with duplicate channels in different units or semantics.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3590511775,
       "created_at": "2026-07-15T20:24:47Z",
       "is_outdated": true,
@@ -281,6 +312,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Remove legacy telemetry keys after normalization**"
     },
     {
+      "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Measure raw coverage before renormalizing progress**\n\nFor a truncated source trace, subtracting the first raw progress and dividing by the truncated span maps whatever fragment was observed onto `0..1` before `measure_raw_source_coverage()` receives it. A lap with only the middle of the circuit can therefore look like it reaches `progress_end == 1`, bypassing the intended incomplete-lap rejection and allowing interpolated missing observations into the corpus.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3590511777,
       "created_at": "2026-07-15T20:24:47Z",
       "is_outdated": true,
@@ -290,6 +322,7 @@
       "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Measure raw coverage before renormalizing progress**"
     },
     {
+      "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Integrate elapsed time over actual track segments**\n\nThis elapsed-time construction drops the first segment time and includes the artificial post-finish segment created by the appended median `ds`, so every simulated trace\u2019s final elapsed time is tied to the wrong distance intervals. That corrupts lap time and timing-table evidence even though the summary and trace may still agree with each other.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3590511780,
       "created_at": "2026-07-15T20:24:47Z",
       "is_outdated": true,
@@ -299,6 +332,7 @@
       "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Integrate elapsed time over actual track segments**"
     },
     {
+      "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Require complete profile draws for field best**\n\nWhen any profile is missing for a draw because a solver failed or a profile was filtered, this still emits a field-best sample by taking the minimum of the remaining profiles. The reconciled estimand requires the draw-wise minimum across complete coherent profiles, so incomplete draws should be rejected or excluded rather than silently changing the field represented by the distribution.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3590511786,
       "created_at": "2026-07-15T20:24:47Z",
       "is_outdated": false,
@@ -308,6 +342,7 @@
       "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Require complete profile draws for field best**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Make the released schema fixture satisfy release checks**\n\nThis fixture is expected to validate as `released`, but it provides no `validation.reports` entries and an empty provenance object, while the implementation below requires every release report and provenance field before interval validation. As written, the first schema test fails on missing reports/provenance instead of exercising the ordered-interval guard, so Task 1 cannot reach its stated GREEN state.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3590511791,
       "created_at": "2026-07-15T20:24:47Z",
       "is_outdated": true,
@@ -317,6 +352,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Make the released schema fixture satisfy release checks**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Record the reviewed head before claiming CI**\n\nWhen reviewing commit `c792725`, this status still points at `1d19f234...` and the adjacent evidence fields cite a CI run for that different material head; locally, `1d19f234...` is not an ancestor of `c792725`. If this squashed commit is the PR head, future handoff will treat the current planning package as `CI-confirmed` even though the recorded workflow evidence belongs to another history, so update the record after observing the actual head or downgrade the verification/publication state.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591229366,
       "created_at": "2026-07-15T22:40:42Z",
       "is_outdated": true,
@@ -326,6 +362,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Record the reviewed head before claiming CI**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Accept the documented no-new-lesson marker**\n\nFor review-file changes where no new lesson is needed, `AGENTS.md`, `project/README.md`, and this error message all tell maintainers to record `lessons_reviewed: no-new-lesson`, but the regex only accepts the prose field `Lessons review:** no-new-lesson`. A future reconciliation that follows the documented marker exactly will fail `bash scripts/verify.sh` unless it makes an unnecessary `LESSONS.md` edit, so the validator should recognize the documented sentinel as well.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591229370,
       "created_at": "2026-07-15T22:40:42Z",
       "is_outdated": false,
@@ -335,6 +372,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Accept the documented no-new-lesson marker**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Instantiate the test track before resampling**\n\nOnce `spa_calibration.alignment` exists, this GREEN test passes the helper function `track` instead of a `CanonicalTrack` instance to `resample_aligned_trace`; the planned implementation immediately reads `track.length_m`, so Task 4 fails with an attribute error instead of validating fixed-distance resampling. Call `track()` here so the alignment task can actually reach the claimed green state.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591229372,
       "created_at": "2026-07-15T22:40:42Z",
       "is_outdated": true,
@@ -344,6 +382,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Instantiate the test track before resampling**"
     },
     {
+      "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Charge ERS deployment on the first segment**\n\nFor any simulated lap that deploys ERS on the first distance interval, starting this integration at index 1 leaves `deploy_kw[0]` unchanged and leaves `battery[0]` at the initial state, so the first segment can spend energy without reducing the reserve or tripping the feasibility gate. That breaks the physical-feasibility contract for traces with early deployment; include interval 0 in the battery update or align deployment samples to the segments being integrated.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591229373,
       "created_at": "2026-07-15T22:40:42Z",
       "is_outdated": true,
@@ -353,6 +392,7 @@
       "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Charge ERS deployment on the first segment**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Read the phase-distance fields actually produced**\n\nAfter the Plan A schema was updated, feature rows expose `phase_start_distance_m` and `phase_end_distance_m`, not `start_distance_m` or `end_distance_m`; `itertuples()` therefore lacks the attributes used here and `build_corner_predictions()` raises before a released artifact can include corner confidence. This is fresh evidence beyond the earlier phase-distance schema issue: the producer now has the fields, but the consumer still reads the wrong names.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591229376,
       "created_at": "2026-07-15T22:40:42Z",
       "is_outdated": true,
@@ -362,6 +402,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Read the phase-distance fields actually produced**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Supply corpus eligibility checksums**\n\n`CorpusManifest` requires `source_eligibility_checksum`, `circuit_year_eligibility_checksum`, and `lap_selection_checksum`, but `write_corpus()` only passes source and artifact checksums. The first fixture or live corpus build that reaches this constructor will fail validation instead of writing provenance, and adding defaults would also defeat the source-eligibility gate, so these checksums need to be inputs and recorded here.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591229378,
       "created_at": "2026-07-15T22:40:42Z",
       "is_outdated": false,
@@ -371,6 +412,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Supply corpus eligibility checksums**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Treat resampled sectors as discrete labels**\n\nIncluding `sector` in the continuous interpolation loop creates fractional sector IDs near boundaries whenever canonical samples straddle a sector change. Later validation and `sector_times()` compare/group against sectors `1`, `2`, and `3`, so those boundary rows can be dropped or misassigned, corrupting sector MAE and timing evidence; resample sectors with a nearest/previous discrete lookup instead.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591229380,
       "created_at": "2026-07-15T22:40:42Z",
       "is_outdated": true,
@@ -380,6 +422,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Treat resampled sectors as discrete labels**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Render every phase for the selected complex**\n\n`build_corner_predictions()` emits one row per complex and phase, but the drawer uses `.find()` and renders only the first row for a clicked complex. For any multi-phase corner such as braking/apex/exit, released evidence would silently hide the remaining phase deltas, analogue support, and confidence, so the UI should aggregate or list all matching rows for the selected complex.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591229382,
       "created_at": "2026-07-15T22:40:42Z",
       "is_outdated": true,
@@ -389,6 +432,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Render every phase for the selected complex**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Fill required feature metadata in the unit test**\n\nAfter `extract_phase_features()` is implemented as shown below, this test fixture calls it without `track_length_m`, `complex_start_distance_m`, `complex_end_distance_m`, or `apex_distance_m`, but the implementation reads those keys before returning a `FeatureRecord`. The Task 6 GREEN run will therefore fail with `KeyError` instead of exercising the feature invariants, so the fixture metadata should include the required distance fields.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591229385,
       "created_at": "2026-07-15T22:40:42Z",
       "is_outdated": false,
@@ -398,6 +442,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Fill required feature metadata in the unit test**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Use season-specific event windows**\n\nBecause the manifest has top-level seasons for 2024, 2025, and 2026, `build_live_corpus()` reuses this Miami 2026 date window for every season while `resolve_session()` queries `year=2024` or `year=2025` and then filters candidates to May 2026. Even the fully populated Miami row therefore resolves to zero sessions for the control/reference seasons, so event windows need to be per-season or omitted when a circuit-unique meeting key is supplied.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591229386,
       "created_at": "2026-07-15T22:40:42Z",
       "is_outdated": true,
@@ -407,6 +452,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Use season-specific event windows**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Reject unsupported artifact statuses**\n\nA checksum-valid artifact with `status: \"draft\"` and `fieldBest: null` passes this Python validator because only the released/non-released split is checked. The browser schema accepts only `pending`, `failed-validation`, or `released`, so the CLI can still bless a malformed artifact that the app will reject; validate the status enum before returning success.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591229390,
       "created_at": "2026-07-15T22:40:42Z",
       "is_outdated": true,
@@ -416,6 +462,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Reject unsupported artifact statuses**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Import RawCoverage before defining alignment coverage**\n\nIn the planned `calibration/src/spa_calibration/alignment.py`, `RawCoverage` is defined in the quality module but this file only imports `CanonicalTrack` and `GeometrySource`. Because there is no `from __future__ import annotations`, Python evaluates this return annotation when the module is imported and raises `NameError`, so the alignment tests and corpus pipeline fail before raw coverage can be measured; import `RawCoverage` or postpone annotations in this module.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591396962,
       "created_at": "2026-07-15T23:19:35Z",
       "is_outdated": false,
@@ -425,6 +472,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Import RawCoverage before defining alignment coverage**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Populate geometry fields required by the loader**\n\nThe fresh evidence is that the current `GeometrySource.from_manifest()` contract now requires `geometry_format` and `checksum`, but the documented `circuits.yaml` rows consumed by `build_corpus_from_bundles()` still omit both fields. Any fixture or live corpus build using this config will raise `ValueError` before track loading and provenance writing, so add the required fields to every circuit row or make the loader derive them deterministically.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591396965,
       "created_at": "2026-07-15T23:19:35Z",
       "is_outdated": false,
@@ -434,6 +482,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Populate geometry fields required by the loader**"
     },
     {
+      "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Conjoin each release report's pass flag**\n\nWhen a mandatory report object is present but has `passed: false`\u2014for example a rolling-origin or identifiability report that failed without adding a false entry to `checks`\u2014this only flattens `report.checks` and ignores the report-level pass flag, so `release_gates.passed` can become true even though a required release report failed. Include every report's `passed` value in the conjunction before allowing a released artifact to be built.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591396968,
       "created_at": "2026-07-15T23:19:36Z",
       "is_outdated": false,
@@ -443,6 +492,7 @@
       "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Conjoin each release report's pass flag**"
     },
     {
+      "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Preserve profile identity in field-best samples**\n\nFor seasons with both drivers from the same team, this stores only `winner.team_name` in the field-best sample; `summarize_field_best()` later looks up traces by `(team_name, draw)`, so the winning lap time from one car-driver profile can be paired with another profile's trace or collide entirely. Preserve `profile_id`/driver identity in `FieldBestSample` and the trace keys to keep each field-best draw coherent.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591396971,
       "created_at": "2026-07-15T23:19:36Z",
       "is_outdated": false,
@@ -452,6 +502,7 @@
       "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Preserve profile identity in field-best samples**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Validate the full released interval in the browser**\n\nFor a checksum-valid released artifact, this browser validator accepts missing or inverted `lower95`/`upper95` values as long as the 80% interval is ordered, while the Python release contract validates the full `lower95 \u2264 lower80 \u2264 median \u2264 upper80 \u2264 upper95` sequence. If the generator is the last gate before `js/calibration-data.js`, the browser artifact can disagree with the released uncertainty schema, so check all five interval fields here.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591396977,
       "created_at": "2026-07-15T23:19:36Z",
       "is_outdated": false,
@@ -461,6 +512,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Validate the full released interval in the browser**"
     },
     {
+      "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Store the trace for the sampled attempt**\n\nWhen `apply_attempt_execution_variation()` changes a lap, the recorded sample uses `attempt_solution.lap_time_s` and sectors but the trace retained for that draw is still the unvaried `solution.trace`. In any nonzero execution-variation draw, `summarize_team_prediction()` can pair a representative attempt's lap summary with a different trace/timing table, so store traces keyed by profile, draw, and attempt from the same solution used for the sample.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591396981,
       "created_at": "2026-07-15T23:19:36Z",
       "is_outdated": false,
@@ -470,6 +522,7 @@
       "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Store the trace for the sampled attempt**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Require released field-best trace data**\n\nA checksum-valid released artifact that contains only `fieldBest.lapTimeSeconds` passes this check, but `buildTraceSources()` immediately reads `calibration.fieldBest.trace` and `timingTable`. If the generator bundles such an artifact, the source selector and telemetry chart receive `undefined` trace data despite a `released` status, so validate the required field-best trace and timing arrays before accepting the artifact.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591396984,
       "created_at": "2026-07-15T23:19:36Z",
       "is_outdated": false,
@@ -479,6 +532,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Require released field-best trace data**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Align the publication state before handoff**\n\nThe front matter and next action still say this corrected package is `ready-to-push`, but this paragraph states that the publication state is `pushed`. Until the branch is actually advanced and PR actions are completed, this contradiction can make future handoff treat local corrections as already published, so keep the body synchronized with the authoritative status fields.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591396987,
       "created_at": "2026-07-15T23:19:36Z",
       "is_outdated": true,
@@ -488,6 +542,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Align the publication state before handoff**"
     },
     {
+      "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Verify geometry content against its manifest checksum**\n\n`GeometrySource` carries a checksum, but the loader reads whatever file is at the configured path without comparing the file contents to that checksum. If a geometry file is stale or modified locally, the corpus can be generated with a different track while provenance still records the manifest checksum, which can corrupt layout-specific features and release evidence; hash the loaded source before deriving the canonical track.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591396989,
       "created_at": "2026-07-15T23:19:36Z",
       "is_outdated": false,
@@ -497,6 +552,7 @@
       "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Verify geometry content against its manifest checksum**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Use analogue evidence fields produced by one upstream frame**\n\nThe raw `FeatureRecord` rows have `season` but no `pair_id`, while `build_paired_deltas()` creates `pair_id` but drops the single `season` field into treatment/reference columns. As a result, passing raw training features fails here on `candidates.pair_id`, while passing paired deltas later fails when corner rendering reads `row.season`; define a single analogue-evidence input schema that includes both the phase identifier and year before building corner confidence.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591396990,
       "created_at": "2026-07-15T23:19:36Z",
       "is_outdated": false,
@@ -506,6 +562,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Use analogue evidence fields produced by one upstream frame**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Check the current activity entry for lesson review**\n\nThis searches the entire activity file for a historical `Lessons review: no-new-lesson`, so any future review reconciliation can pass without changing `LESSONS.md` and without adding a no-new-lesson marker to the newly appended entry. That weakens the closeout guardrail for external-review handling; restrict the check to the activity entry added in the same change, or otherwise verify that the marker is current.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591396994,
       "created_at": "2026-07-15T23:19:36Z",
       "is_outdated": false,
@@ -515,6 +572,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Check the current activity entry for lesson review**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Supply geometry_source in the track fixture**\n\nAfter the previous call-site fix, this fixture now constructs a `CanonicalTrack` directly, but the planned dataclass below requires a `geometry_source` argument. Every alignment test that calls `track()` will raise `TypeError: missing required positional argument 'geometry_source'` before exercising projection, resampling, or the raw-coverage regression, so the Task 4 GREEN state is still unreachable.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591467142,
       "created_at": "2026-07-15T23:36:50Z",
       "is_outdated": false,
@@ -524,6 +582,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Supply geometry_source in the track fixture**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Default the artifact validator clock**\n\nThis public validator requires the keyword-only `now` argument, but both the planned tests and the CLI call it as `validate_prediction_artifact(payload)` without that argument. The first `spa-calibration validate` run will therefore fail with `TypeError` before checksum or release-gate validation runs; give `now` a deterministic/default value or pass it at every external call site.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591467149,
       "created_at": "2026-07-15T23:36:50Z",
       "is_outdated": false,
@@ -533,6 +592,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Default the artifact validator clock**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Reconcile the completion count with 23 fresh findings**\n\nThe status front matter in this commit records `fresh_comments_total: 23` and the plan now appends FOLLOWUP-01 through FOLLOWUP-11, but this merge gate still declares closeout complete after only the original twelve fresh findings have dispositions. A future handoff could satisfy this completion definition while leaving the later eleven review threads unaccounted for, undermining the review-action ledger required by the project controls.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591467151,
       "created_at": "2026-07-15T23:36:50Z",
       "is_outdated": false,
@@ -542,6 +602,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Reconcile the completion count with 23 fresh findings**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Provide raw coverage in quality fixtures**\n\nThe planned quality tests instantiate `LapContext(rainfall, flags, is_pit_out, aborted)` with four positional arguments, but this dataclass now requires `raw_coverage` as a fifth required field. The Task 3 tests will fail with `TypeError` before exercising clean-lap acceptance or flag rejection, so add a raw-coverage fixture/default wherever the context is constructed.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591467157,
       "created_at": "2026-07-15T23:36:50Z",
       "is_outdated": false,
@@ -551,6 +612,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Provide raw coverage in quality fixtures**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Compute feed gaps from observed intervals**\n\nFor any multi-sample accepted lap, seeding `gaps.max()` with `lap_time_s` makes `maximum_gap` at least the full lap duration, so a normal 100 s clean lap is always flagged as a `feed-gap` and rejected by the 1.5 s threshold. This would empty or severely underpopulate the corpus even when the telemetry intervals are dense; use only the observed inter-sample gaps for complete traces.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591467159,
       "created_at": "2026-07-15T23:36:51Z",
       "is_outdated": false,
@@ -560,6 +622,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Compute feed gaps from observed intervals**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Exclude missing braking-onset outcomes before averaging**\n\nFor flat or high-speed phases with no brake rows, `extract_phase_features()` emits `braking_onset_from_complex_start_m=None`, but this aggregation blindly averages that nullable measure with the rest of the model outcomes. Those groups will either raise during `np.average` or propagate NaN deltas into fitting and release validation, so missing braking-onset outcomes need an explicit mask/imputation policy instead of entering the paired-delta frame as ordinary numeric targets.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591467165,
       "created_at": "2026-07-15T23:36:51Z",
       "is_outdated": false,
@@ -569,6 +632,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Exclude missing braking-onset outcomes before averaging**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Use a complete released artifact fixture**\n\nThis fixture sets `release_gates.passed` to true, so `build_prediction_artifact()` immediately runs the released semantic checks, but the supplied validation object has no required `reports` and the interval has no `lower95`/`upper95`. The GREEN test will fail on missing release evidence or 95% bounds instead of exercising ordered intervals, so the passing released fixture needs the same complete report and five-point interval shape required by the validator.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591467170,
       "created_at": "2026-07-15T23:36:51Z",
       "is_outdated": false,
@@ -578,6 +642,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Use a complete released artifact fixture**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Declare artifact as a required Typer option**\n\nThe planned verification command is `spa-calibration validate --artifact ...`, but this bare Typer parameter is a positional argument, not a dash option; Typer's parameter docs distinguish CLI Arguments as positional and CLI Options as dash flags (https://typer.tiangolo.com/reference/parameters/). As written, the documented command will reject `--artifact` before running checksum validation, so declare it with `typer.Option(...)` or change the documented invocation to a positional path.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591467173,
       "created_at": "2026-07-15T23:36:51Z",
       "is_outdated": false,
@@ -587,6 +652,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Declare artifact as a required Typer option**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Verify every required corpus artifact**\n\n`ARTIFACTS` declares the four processed files that define a corpus, but `verify_corpus()` only checks whatever filenames the manifest happens to list. A malformed `provenance.json` that omits `features.parquet` or `aligned-traces.parquet` would pass verification while downstream model stages consume an unchecked or missing table, so verify the declared required artifact set before trusting the manifest checksums.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591467175,
       "created_at": "2026-07-15T23:36:51Z",
       "is_outdated": false,
@@ -596,6 +662,7 @@
       "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Verify every required corpus artifact**"
     },
     {
+      "body": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Apply raw progress reversal to lap acceptance**\n\nIn the live pipeline this classifier receives the monotonic-repaired `aligned` trace, so computing `maximum_reversal` from `trace.progress` hides reversals that `measure_raw_source_coverage()` already measured before repair. A lap with a large raw source reversal can therefore be accepted after alignment because `context.raw_coverage.maximum_progress_reversal` is ignored; base the rejection on the raw coverage value to preserve the data-quality gate.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591467178,
       "created_at": "2026-07-15T23:36:51Z",
       "is_outdated": false,
@@ -605,6 +672,7 @@
       "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Apply raw progress reversal to lap acceptance**"
     },
     {
+      "body": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Normalize YAML timestamp objects before parsing**\n\nThe provided `events.yaml` uses unquoted ISO timestamp scalars, and PyYAML `safe_load()` constructs those as timestamp objects rather than plain strings in typical configurations. When that happens, `datetime.fromisoformat(window[\"start\"])` receives a `datetime` object and the live corpus refresh fails before resolving any season session; normalize both strings and already-parsed datetimes here.\n\nUseful? React with \ud83d\udc4d\u00a0/ \ud83d\udc4e.",
       "comment_id": 3591467181,
       "created_at": "2026-07-15T23:36:51Z",
       "is_outdated": false,
