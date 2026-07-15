@@ -52,6 +52,17 @@ jobs:
           echo 'b1d81f34c30525995c69b00ba26f78a28e18c4a531be602b04887fccaf5773f3  /tmp/followup.b64' | sha256sum -c -
           base64 -d /tmp/followup.b64 | gzip -d > /tmp/apply_followup.py
           echo '7acd3fb31fcb1ace8acb3171e4b0944bb616151eda67ff9b2ff9c8020607e8a2  /tmp/apply_followup.py' | sha256sum -c -
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('/tmp/apply_followup.py')
+          text = path.read_text()
+          old = 'replace_exact(DATA, "    result = resample_aligned_trace(trace, track, 5)\\n", "    result = resample_aligned_trace(trace, track(), 5)\\n")'
+          new = 'replace_exact(DATA, "    result = resample_aligned_trace(trace, track=track, spacing_m=5)\\n", "    result = resample_aligned_trace(trace, track=track(), spacing_m=5)\\n")'
+          if text.count(old) != 1:
+              raise SystemExit(f'track-call patch target count={text.count(old)}')
+          path.write_text(text.replace(old, new))
+          PY
+          echo '4ac2afc521d4788dfa4127d7bfcb1abc76962f8b0016451efb34f2c4905f5a32  /tmp/apply_followup.py' | sha256sum -c -
           python -m py_compile /tmp/apply_followup.py
       - name: Apply later-review reconciliation
         run: |
