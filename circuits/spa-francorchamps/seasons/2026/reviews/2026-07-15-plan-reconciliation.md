@@ -452,3 +452,26 @@ After the consolidated plan commit:
 3. the temporal-gate thread is resolved as superseded by the broader mandatory-review implementation, not dismissed as incorrect;
 4. a top-level PR comment links this reconciliation and requests one fresh Codex review;
 5. any new finding is reassessed against the revised architecture before further changes.
+
+## C. Fresh Codex review of `1ffaf2d`
+
+All twelve findings were verified against the reviewed snippets and accepted. They expose concrete internal contradictions rather than requests to reopen the approved architecture. Reactions, replies, and thread resolution are recorded separately after publication of the corrected head.
+
+| Task | Thread | Severity | Disposition | Corrective contract and regression evidence |
+|---|---|---:|---|---|
+| DATA-01 | `PRRT_kwDOTZdGvM6RO8R2` | P2 | accepted | Event rows now validate as either `meeting_key`-identified or complete fallback-discriminator records; every shown event has per-season windows; missing metadata fails before retrieval. |
+| DATA-02 | `PRRT_kwDOTZdGvM6RO8R-` | P2 | accepted | `GeometrySource` owns path, format, checksum, source, and licence; loader declaration and pipeline call use the same interface, including the Spa JSON adapter. |
+| DATA-03 | `PRRT_kwDOTZdGvM6RO8SK` | P1 | accepted | Observed progress is unwrapped but never divided by its observed span; a middle-60% fixture remains 60% and is rejected before resampling. |
+| MODEL-01 | `PRRT_kwDOTZdGvM6RO8Rw` | P1 | accepted | `lap_slug` remains in model and baseline joins before coherent-lap aggregation. |
+| MODEL-02 | `PRRT_kwDOTZdGvM6RO8R8` | P1 | accepted | `ReleaseGates` represents every YAML key, rejects unknown/missing keys, and the final conjunction retains temporal, uncertainty, baseline, feasibility, and identifiability evidence. |
+| MODEL-03 | `PRRT_kwDOTZdGvM6RO8SA` | P2 | accepted | `_solve_speed_envelope()` and `simulate_lap()` share an explicit `ControlConstraints` interface with length validation. |
+| MODEL-04 | `PRRT_kwDOTZdGvM6RO8SN` | P1 | accepted | `n` samples produce `n-1` real segments; elapsed time begins at zero and ends after cumulative segment times, without a post-finish segment. |
+| MODEL-05 | `PRRT_kwDOTZdGvM6RO8SR` | P1 | accepted | Field draws require the exact frozen profile-attempt set, reject duplicates/missing solver results, and take best attempt per profile before field minimum. |
+| MODEL-06 | `PRRT_kwDOTZdGvM6RO8Ry` | P1 | accepted | Complete semantic validation precedes hashing; checksum and full validation run again before serialization. |
+| APP-01 | `PRRT_kwDOTZdGvM6RO8SC` | P1 | accepted | Pending, failed, and released artifacts all pass the semantic validator; any failure emits frozen pending, and unreleased estimates are suppressed. |
+| APP-02 | `PRRT_kwDOTZdGvM6RO8SI` | P2 | accepted | Legacy telemetry keys are destructured away at the adapter boundary; only normalized channels remain. |
+| APP-03 | `PRRT_kwDOTZdGvM6RO8SV` | P2 | accepted | One complete released fixture satisfies all reports, provenance, scenario, timestamps, and intervals; each negative test mutates one property. |
+
+**Horizontal review:** Plan A fields consumed by Plan B, Plan B artifact fields consumed by Plan C, all release predicates, scenario identity, attempt count, complete-profile semantics, and fail-closed states were reviewed together. No production calibration functionality was implemented. The provisional `1:40.4` estimate remains suppressed.
+
+**PR action state at publication:** reactions pending; inline replies pending; twelve fresh threads pending resolution until the corrected commit is pushed and verified.

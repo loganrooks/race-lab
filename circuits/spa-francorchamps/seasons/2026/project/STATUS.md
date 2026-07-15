@@ -5,13 +5,13 @@ phase: pr1-post-reconciliation-closeout
 repository: loganrooks/race-lab
 branch: chore/establish-race-lab-structure
 pull_request: 1
-last_observed_remote_head: 1d19f234f5d7edeabfbf86ceccc88c1aac49f620
-last_observed_at: 2026-07-15T22:28:08Z
-evidence_source: github-pr-head-and-actions-run-29455470610
-publication_state: pushed
-verification_state: ci-confirmed-for-recorded-material-head
-active_tasks: [DATA-01, DATA-02, DATA-03, MODEL-01, MODEL-02, MODEL-03, MODEL-04, MODEL-05, MODEL-06, APP-01, APP-02, APP-03, DOCS-01, VERIFY-01, VERIFY-02, PR-01, PR-02, PR-03, PR-04]
-next_action: Verify and disposition DATA-01 against the current data-pipeline plan before editing.
+last_observed_remote_head: 76738fa1a725a0bd507011c77ec19d783dd63408
+last_observed_at: 2026-07-15T22:35:00Z
+evidence_source: github-pr-head-actions-run-29455579091-and-review-threads
+publication_state: ready-to-push
+verification_state: locally-verified-in-publication-workflow
+active_tasks: [PR-01, PR-02, PR-03, PR-04]
+next_action: Publish the corrected head, then rate and reply to all original and fresh comments and resolve the twelve fresh threads.
 original_comments_total: 23
 original_comments_rated: 5
 original_comments_replied: 0
@@ -39,7 +39,7 @@ Complete a bounded second reconciliation pass for PR #1, correct the twelve fres
 - **Remotely observed:** five of the 23 original inline comments had a positive reaction; eighteen remained unrated.
 - **Reviewed:** a fresh Codex review of `1ffaf2d232f6bafd134fafa94ca067683744b639` opened twelve unresolved findings.
 - **Reported but unverified:** a prior PR comment claimed an earlier GitHub Actions verification run passed; no retrievable workflow run was found for `1ffaf2d232f6bafd134fafa94ca067683744b639` during the latest inspection.
-- **Not performed:** the twelve fresh findings have not yet been dispositioned or corrected.
+- **Locally verified:** all twelve fresh findings were evaluated and corrected; canonical verification passed in the publication workflow. PR actions remain pending until push.
 
 ## Active work
 
@@ -47,7 +47,7 @@ The active tasks are defined in `../plans/2026-07-15-pr1-closeout-plan.md`. Proj
 
 ## Blockers and risks
 
-- The four plans contain twelve known internal contradictions or incomplete contracts.
+- The corrected package still requires remote publication and PR-action completion.
 - The original reaction sweep is incomplete.
 - Another review should not be requested until the intended corrected head is stable and all local procedural cleanup is complete.
 
@@ -64,4 +64,4 @@ The project-control unit passed targeted and reconstructed canonical verificatio
 
 ## Next exact action
 
-Evaluate `DATA-01` against the current data-pipeline plan, record its disposition, and only then revise the event-manifest and live-refresh contracts.
+Publish the verified corrected head, then complete reactions, inline replies, and fresh-thread resolutions before requesting one final review.

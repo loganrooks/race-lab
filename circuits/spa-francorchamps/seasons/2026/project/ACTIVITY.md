@@ -105,3 +105,43 @@ mutation: append-only
 **Next action:** verify and disposition `DATA-01` against the current data-pipeline plan before editing.
 
 **Lessons review:** no-new-lesson; the retained workflow ID demonstrates the `L-006` evidence guardrail.
+
+## A-006 — 2026-07-15T22:35:00Z — Second reconciliation prepared
+
+**Evidence status:** remotely-observed starting state; local-work-in-progress.
+
+**Starting state:** PR #1 head `76738fa1a725a0bd507011c77ec19d783dd63408`; GitHub Actions run `29455579091` passed; 23 original threads resolved with 5 reactions and no replies; twelve fresh threads unresolved with no reactions or replies. The prior status snapshot still named material head `1d19f234...`, so this entry corrects that stale observation before relying on it.
+
+**Work performed:** verified all twelve fresh findings against the current plans and revised the data, model, browser, closeout, reconciliation, and project-status contracts as a bounded planning-only pass.
+
+**Files changed:** three implementation plans, the closeout plan, reconciliation ledger, status, and activity history.
+
+**Verification:** pending canonical verification in the publication workflow.
+
+**Publication / remote actions:** none yet; reactions, replies, and fresh-thread resolutions intentionally wait for a verified pushed head.
+
+**Result:** corrected publication unit prepared without production calibration implementation.
+
+**Next action:** run canonical verification, finalize the records, and publish one coherent head.
+
+**Lessons review:** no-new-lesson; this pass applies `L-003`, `L-004`, `L-005`, and `L-007`.
+
+## A-007 — 2026-07-15T22:50:00Z — Second reconciliation locally verified
+
+**Evidence status:** locally-verified in GitHub Actions publication workflow `29457435803`; commit and push pending.
+
+**Starting state:** the twelve accepted findings had been corrected in one working publication unit and `VERIFY-02` remained active.
+
+**Work performed:** ran the canonical verifier, read the complete successful output, marked the plan-level verification task complete, and prepared the coherent unit for one push.
+
+**Files changed:** project records and closeout checklist finalized after verification.
+
+**Verification:** `bash scripts/verify.sh` passed before this finalization; the workflow reruns it after finalization before committing.
+
+**Publication / remote actions:** push pending; no PR reaction, reply, or resolution count is advanced by this entry.
+
+**Result:** all plan-correction tasks and local verification tasks are complete; only PR actions, final review, and merge remain.
+
+**Next action:** push the corrected head and complete `PR-01` and `PR-02`.
+
+**Lessons review:** no-new-lesson; horizontal review and fail-closed publication followed existing guardrails.
