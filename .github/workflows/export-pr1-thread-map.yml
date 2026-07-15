@@ -1,0 +1,95 @@
+name: Export PR1 thread map
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  export:
+    if: github.head_ref == 'automation/spa-pr1-followup-20260715'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - name: Export PR1 review thread IDs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+        run: |
+          python - <<'PY'
+          import json, os, urllib.request
+          owner, name = os.environ['GH_REPOSITORY'].split('/', 1)
+          query = '''
+          query($owner:String!, $name:String!, $number:Int!, $after:String) {
+            repository(owner:$owner, name:$name) {
+              pullRequest(number:$number) {
+                reviewThreads(first:100, after:$after) {
+                  pageInfo { hasNextPage endCursor }
+                  nodes {
+                    id
+                    isResolved
+                    isOutdated
+                    path
+                    comments(first:1) {
+                      nodes { databaseId body createdAt }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          '''
+          rows = []
+          after = None
+          while True:
+              payload = json.dumps({
+                  'query': query,
+                  'variables': {'owner': owner, 'name': name, 'number': 1, 'after': after},
+              }).encode()
+              request = urllib.request.Request(
+                  'https://api.github.com/graphql',
+                  data=payload,
+                  headers={
+                      'Authorization': f"Bearer {os.environ['GH_TOKEN']}",
+                      'Accept': 'application/vnd.github+json',
+                      'Content-Type': 'application/json',
+                  },
+              )
+              with urllib.request.urlopen(request) as response:
+                  result = json.load(response)
+              if result.get('errors'):
+                  raise SystemExit(result['errors'])
+              threads = result['data']['repository']['pullRequest']['reviewThreads']
+              for thread in threads['nodes']:
+                  first = thread['comments']['nodes'][0]
+                  rows.append({
+                      'thread_id': thread['id'],
+                      'is_resolved': thread['isResolved'],
+                      'is_outdated': thread['isOutdated'],
+                      'path': thread['path'],
+                      'comment_id': first['databaseId'],
+                      'title': first['body'].splitlines()[0],
+                      'created_at': first['createdAt'],
+                  })
+              if not threads['pageInfo']['hasNextPage']:
+                  break
+              after = threads['pageInfo']['endCursor']
+          os.makedirs('.github/spa-thread-map', exist_ok=True)
+          with open('.github/spa-thread-map/pr1-threads.json', 'w') as handle:
+              json.dump({'pull_request': 1, 'threads': rows}, handle, indent=2, sort_keys=True)
+              handle.write('\n')
+          print(f'exported {len(rows)} review threads')
+          PY
+      - name: Commit thread map
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/spa-thread-map/pr1-threads.json
+          git commit -m 'chore: export PR1 review thread map' || exit 0
+          git push origin HEAD:${{ github.head_ref }}
