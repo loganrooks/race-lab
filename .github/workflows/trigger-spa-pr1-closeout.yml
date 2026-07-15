@@ -27,6 +27,24 @@ jobs:
           echo 'e4cb6357e98737d1104bfe853742566b6273446a41b220ccdbbf2e7552803397  /tmp/apply-spa.b64' | sha256sum -c -
           base64 -d /tmp/apply-spa.b64 | gzip -d > /tmp/apply_spa_pr1_closeout.py
           echo 'ef10e0521035bd198e7fe006afa0f9a44240046a2db486a1a103d40097f2807f  /tmp/apply_spa_pr1_closeout.py' | sha256sum -c -
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('/tmp/apply_spa_pr1_closeout.py')
+          text = path.read_text()
+          old = '    replace_once(MODEL, insert_marker, control_block + insert_marker)\n'
+          new = '''    model_text = MODEL.read_text(encoding="utf-8")
+              first_marker = model_text.find(insert_marker)
+              second_marker = model_text.find(insert_marker, first_marker + len(insert_marker))
+              if first_marker < 0 or second_marker < 0:
+                  raise RuntimeError(f"{MODEL}: expected at least two LapSolution markers")
+              MODEL.write_text(model_text[:second_marker] + control_block + model_text[second_marker:], encoding="utf-8")
+          '''
+          new = '\n'.join(line[12:] if line.startswith('            ') else line for line in new.splitlines()) + '\n'
+          if text.count(old) != 1:
+              raise SystemExit(f'LapSolution patch target count={text.count(old)}')
+          path.write_text(text.replace(old, new))
+          PY
+          echo '043402e56ad43c4f3fbb2e08e12561f1fd3b7abb08bf6f86c8071207aa89a2fb  /tmp/apply_spa_pr1_closeout.py' | sha256sum -c -
           python -m py_compile /tmp/apply_spa_pr1_closeout.py
       - name: Apply bounded reconciliation
         run: |
