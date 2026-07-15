@@ -1,0 +1,328 @@
+{
+  "comments": [
+    {
+      "created_at": "2026-07-15T15:38:52Z",
+      "id": 3588678442,
+      "node_id": "PRRC_kwDOTZdGvM7V5uMq",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "title": "Clamp the resampling grid to the track length"
+    },
+    {
+      "created_at": "2026-07-15T15:38:52Z",
+      "id": 3588678447,
+      "node_id": "PRRC_kwDOTZdGvM7V5uMv",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "title": "Use keyword arguments for EventSpec"
+    },
+    {
+      "created_at": "2026-07-15T15:38:52Z",
+      "id": 3588678453,
+      "node_id": "PRRC_kwDOTZdGvM7V5uM1",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "title": "Use raw progress to classify incomplete laps"
+    },
+    {
+      "created_at": "2026-07-15T15:38:52Z",
+      "id": 3588678457,
+      "node_id": "PRRC_kwDOTZdGvM7V5uM5",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "title": "Preserve track geometry when resampling traces"
+    },
+    {
+      "created_at": "2026-07-15T15:38:52Z",
+      "id": 3588678462,
+      "node_id": "PRRC_kwDOTZdGvM7V5uM-",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "title": "Make lap_time_s match the emitted trace timeline"
+    },
+    {
+      "created_at": "2026-07-15T15:38:52Z",
+      "id": 3588678468,
+      "node_id": "PRRC_kwDOTZdGvM7V5uNE",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "title": "Prevent deployment from spending future regen"
+    },
+    {
+      "created_at": "2026-07-15T15:38:53Z",
+      "id": 3588678474,
+      "node_id": "PRRC_kwDOTZdGvM7V5uNK",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "title": "Carry phase distances into Spa feature rows"
+    },
+    {
+      "created_at": "2026-07-15T15:38:53Z",
+      "id": 3588678476,
+      "node_id": "PRRC_kwDOTZdGvM7V5uNM",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "title": "Reject incomplete released artifacts in validation"
+    },
+    {
+      "created_at": "2026-07-15T15:38:53Z",
+      "id": 3588678480,
+      "node_id": "PRRC_kwDOTZdGvM7V5uNQ",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "title": "Avoid emitting a zero-length full-power phase"
+    },
+    {
+      "created_at": "2026-07-15T15:38:53Z",
+      "id": 3588678485,
+      "node_id": "PRRC_kwDOTZdGvM7V5uNV",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "title": "Store braking onset relative to the corner, not the phase"
+    },
+    {
+      "created_at": "2026-07-15T15:38:53Z",
+      "id": 3588678489,
+      "node_id": "PRRC_kwDOTZdGvM7V5uNZ",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "title": "Aggregate validation by coherent laps"
+    },
+    {
+      "created_at": "2026-07-15T15:38:53Z",
+      "id": 3588678490,
+      "node_id": "PRRC_kwDOTZdGvM7V5uNa",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "title": "Apply the learned non-speed corrections"
+    },
+    {
+      "created_at": "2026-07-15T16:05:22Z",
+      "id": 3588873521,
+      "node_id": "PRRC_kwDOTZdGvM7V6d0x",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-app-integration.md",
+      "title": "Validate artifacts before bundling released status"
+    },
+    {
+      "created_at": "2026-07-15T16:05:22Z",
+      "id": 3588873527,
+      "node_id": "PRRC_kwDOTZdGvM7V6d03",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "title": "Resolve sessions with a circuit-unique key"
+    },
+    {
+      "created_at": "2026-07-15T16:05:22Z",
+      "id": 3588873531,
+      "node_id": "PRRC_kwDOTZdGvM7V6d07",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "title": "Recompute path distance after changing the line"
+    },
+    {
+      "created_at": "2026-07-15T16:05:23Z",
+      "id": 3588873536,
+      "node_id": "PRRC_kwDOTZdGvM7V6d1A",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "title": "Preserve the observed year for analogues"
+    },
+    {
+      "created_at": "2026-07-15T16:05:23Z",
+      "id": 3588873540,
+      "node_id": "PRRC_kwDOTZdGvM7V6d1E",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-app-integration.md",
+      "title": "Normalize OpenF1 reference channel names"
+    },
+    {
+      "created_at": "2026-07-15T16:05:23Z",
+      "id": 3588873544,
+      "node_id": "PRRC_kwDOTZdGvM7V6d1I",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "title": "Require temporal gates before release"
+    },
+    {
+      "created_at": "2026-07-15T16:05:23Z",
+      "id": 3588873551,
+      "node_id": "PRRC_kwDOTZdGvM7V6d1P",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "title": "Preserve joint outcome uncertainty across draws"
+    },
+    {
+      "created_at": "2026-07-15T16:05:23Z",
+      "id": 3588873557,
+      "node_id": "PRRC_kwDOTZdGvM7V6d1V",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "title": "Use configured geometry paths when loading tracks"
+    },
+    {
+      "created_at": "2026-07-15T16:05:23Z",
+      "id": 3588873563,
+      "node_id": "PRRC_kwDOTZdGvM7V6d1b",
+      "path": "scripts/verify.sh",
+      "title": "Make canonical verification pass with ruff installed"
+    },
+    {
+      "created_at": "2026-07-15T16:05:23Z",
+      "id": 3588873567,
+      "node_id": "PRRC_kwDOTZdGvM7V6d1f",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "title": "Filter candidate laps by declared qualifying segment"
+    },
+    {
+      "created_at": "2026-07-15T16:05:23Z",
+      "id": 3588873575,
+      "node_id": "PRRC_kwDOTZdGvM7V6d1n",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "title": "Require release provenance fields before checksumming"
+    },
+    {
+      "created_at": "2026-07-15T20:24:47Z",
+      "id": 3590511747,
+      "node_id": "PRRC_kwDOTZdGvM7WAtyD",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "title": "Preserve lap_slug in validation joins"
+    },
+    {
+      "created_at": "2026-07-15T20:24:47Z",
+      "id": 3590511751,
+      "node_id": "PRRC_kwDOTZdGvM7WAtyH",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "title": "Run full release validation before checksumming"
+    },
+    {
+      "created_at": "2026-07-15T20:24:47Z",
+      "id": 3590511755,
+      "node_id": "PRRC_kwDOTZdGvM7WAtyL",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "title": "Populate event metadata before live refresh"
+    },
+    {
+      "created_at": "2026-07-15T20:24:47Z",
+      "id": 3590511761,
+      "node_id": "PRRC_kwDOTZdGvM7WAtyR",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "title": "Carry every configured release gate into validation"
+    },
+    {
+      "created_at": "2026-07-15T20:24:47Z",
+      "id": 3590511764,
+      "node_id": "PRRC_kwDOTZdGvM7WAtyU",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "title": "Call geometry loader with its declared arguments"
+    },
+    {
+      "created_at": "2026-07-15T20:24:47Z",
+      "id": 3590511766,
+      "node_id": "PRRC_kwDOTZdGvM7WAtyW",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "title": "Reconcile control-constraint solver argument"
+    },
+    {
+      "created_at": "2026-07-15T20:24:47Z",
+      "id": 3590511768,
+      "node_id": "PRRC_kwDOTZdGvM7WAtyY",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-app-integration.md",
+      "title": "Validate pending artifacts before bundling"
+    },
+    {
+      "created_at": "2026-07-15T20:24:47Z",
+      "id": 3590511775,
+      "node_id": "PRRC_kwDOTZdGvM7WAtyf",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-app-integration.md",
+      "title": "Remove legacy telemetry keys after normalization"
+    },
+    {
+      "created_at": "2026-07-15T20:24:47Z",
+      "id": 3590511777,
+      "node_id": "PRRC_kwDOTZdGvM7WAtyh",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "title": "Measure raw coverage before renormalizing progress"
+    },
+    {
+      "created_at": "2026-07-15T20:24:47Z",
+      "id": 3590511780,
+      "node_id": "PRRC_kwDOTZdGvM7WAtyk",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "title": "Integrate elapsed time over actual track segments"
+    },
+    {
+      "created_at": "2026-07-15T20:24:47Z",
+      "id": 3590511786,
+      "node_id": "PRRC_kwDOTZdGvM7WAtyq",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "title": "Require complete profile draws for field best"
+    },
+    {
+      "created_at": "2026-07-15T20:24:47Z",
+      "id": 3590511791,
+      "node_id": "PRRC_kwDOTZdGvM7WAtyv",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-app-integration.md",
+      "title": "Make the released schema fixture satisfy release checks"
+    },
+    {
+      "created_at": "2026-07-15T22:40:42Z",
+      "id": 3591229366,
+      "node_id": "PRRC_kwDOTZdGvM7WDc-2",
+      "path": "circuits/spa-francorchamps/seasons/2026/project/STATUS.md",
+      "title": "Record the reviewed head before claiming CI"
+    },
+    {
+      "created_at": "2026-07-15T22:40:42Z",
+      "id": 3591229370,
+      "node_id": "PRRC_kwDOTZdGvM7WDc-6",
+      "path": "scripts/verify_project_control.py",
+      "title": "Accept the documented no-new-lesson marker"
+    },
+    {
+      "created_at": "2026-07-15T22:40:42Z",
+      "id": 3591229372,
+      "node_id": "PRRC_kwDOTZdGvM7WDc-8",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "title": "Instantiate the test track before resampling"
+    },
+    {
+      "created_at": "2026-07-15T22:40:42Z",
+      "id": 3591229373,
+      "node_id": "PRRC_kwDOTZdGvM7WDc-9",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "title": "Charge ERS deployment on the first segment"
+    },
+    {
+      "created_at": "2026-07-15T22:40:42Z",
+      "id": 3591229376,
+      "node_id": "PRRC_kwDOTZdGvM7WDc_A",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "title": "Read the phase-distance fields actually produced"
+    },
+    {
+      "created_at": "2026-07-15T22:40:42Z",
+      "id": 3591229378,
+      "node_id": "PRRC_kwDOTZdGvM7WDc_C",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "title": "Supply corpus eligibility checksums"
+    },
+    {
+      "created_at": "2026-07-15T22:40:42Z",
+      "id": 3591229380,
+      "node_id": "PRRC_kwDOTZdGvM7WDc_E",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "title": "Treat resampled sectors as discrete labels"
+    },
+    {
+      "created_at": "2026-07-15T22:40:42Z",
+      "id": 3591229382,
+      "node_id": "PRRC_kwDOTZdGvM7WDc_G",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-app-integration.md",
+      "title": "Render every phase for the selected complex"
+    },
+    {
+      "created_at": "2026-07-15T22:40:42Z",
+      "id": 3591229385,
+      "node_id": "PRRC_kwDOTZdGvM7WDc_J",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "title": "Fill required feature metadata in the unit test"
+    },
+    {
+      "created_at": "2026-07-15T22:40:42Z",
+      "id": 3591229386,
+      "node_id": "PRRC_kwDOTZdGvM7WDc_K",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "title": "Use season-specific event windows"
+    },
+    {
+      "created_at": "2026-07-15T22:40:42Z",
+      "id": 3591229390,
+      "node_id": "PRRC_kwDOTZdGvM7WDc_O",
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "title": "Reject unsupported artifact statuses"
+    }
+  ],
+  "pull_request": 1,
+  "repository": "loganrooks/race-lab"
+}
