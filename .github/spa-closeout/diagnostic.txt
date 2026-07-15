@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/tmp/apply_spa_pr1_closeout.py", line 960, in <module>
+    apply_main()
+  File "/tmp/apply_spa_pr1_closeout.py", line 539, in apply_main
+    replace_once(MODEL, insert_marker, control_block + insert_marker)
+  File "/tmp/apply_spa_pr1_closeout.py", line 23, in replace_once
+    raise RuntimeError(f'{path}: expected exactly one match, found {count}: {old[:120]!r}')
+RuntimeError: circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md: expected exactly one match, found 2: '@dataclass(frozen=True)\nclass LapSolution:\n'
