@@ -17,7 +17,7 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
-      - name: Export PR1 review thread IDs
+      - name: Export PR1 review thread IDs and bodies
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPOSITORY: ${{ github.repository }}
@@ -75,6 +75,7 @@ jobs:
                       'path': thread['path'],
                       'comment_id': first['databaseId'],
                       'title': first['body'].splitlines()[0],
+                      'body': first['body'],
                       'created_at': first['createdAt'],
                   })
               if not threads['pageInfo']['hasNextPage']:
@@ -91,5 +92,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add .github/spa-thread-map/pr1-threads.json
-          git commit -m 'chore: export PR1 review thread map' || exit 0
+          git commit -m 'chore: export PR1 review thread bodies' || exit 0
           git push origin HEAD:${{ github.head_ref }}
