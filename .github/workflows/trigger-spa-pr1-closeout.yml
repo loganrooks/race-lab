@@ -21,22 +21,12 @@ jobs:
           python-version: '3.11'
       - name: Install verification tools
         run: python -m pip install --disable-pip-version-check pytest ruff
-      - name: Extract reconciliation payload
+      - name: Assemble and verify reconciliation payload
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          lines = Path('.github/workflows/apply-spa-pr1-closeout.yml').read_text().splitlines()
-          start = next(index for index, line in enumerate(lines) if "cat > /tmp/apply-spa.b64 <<'EOF'" in line) + 1
-          payload = []
-          for line in lines[start:]:
-              if line.strip() == 'EOF':
-                  break
-              payload.append(line.strip())
-          if not payload:
-              raise SystemExit('embedded reconciliation payload is empty')
-          Path('/tmp/apply-spa.b64').write_text(''.join(payload) + '\n')
-          PY
+          cat .github/spa-closeout/part-*.b64 > /tmp/apply-spa.b64
+          echo 'e4cb6357e98737d1104bfe853742566b6273446a41b220ccdbbf2e7552803397  /tmp/apply-spa.b64' | sha256sum -c -
           base64 -d /tmp/apply-spa.b64 | gzip -d > /tmp/apply_spa_pr1_closeout.py
+          echo 'ef10e0521035bd198e7fe006afa0f9a44240046a2db486a1a103d40097f2807f  /tmp/apply_spa_pr1_closeout.py' | sha256sum -c -
           python -m py_compile /tmp/apply_spa_pr1_closeout.py
       - name: Apply bounded reconciliation
         run: python /tmp/apply_spa_pr1_closeout.py
@@ -51,6 +41,7 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git rm .github/workflows/apply-spa-pr1-closeout.yml .github/workflows/trigger-spa-pr1-closeout.yml
+          git rm -r .github/spa-closeout
           git add -A
           git commit -m 'docs: close Spa post-reconciliation review gaps'
           git push origin HEAD:${{ github.head_ref }}
