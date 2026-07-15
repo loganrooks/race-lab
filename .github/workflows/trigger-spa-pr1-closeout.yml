@@ -25,9 +25,12 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
           text = Path('.github/workflows/apply-spa-pr1-closeout.yml').read_text()
-          payload = text.split("cat > /tmp/apply-spa.b64 <<'EOF'\n", 1)[1].split('\nEOF\n', 1)[0]
-          Path('/tmp/apply-spa.b64').write_text(payload + '\n')
+          match = re.search(r"cat > /tmp/apply-spa\.b64 <<'EOF'\n(.*?)\n\s*EOF\n", text, re.DOTALL)
+          if match is None:
+              raise SystemExit('embedded reconciliation payload not found')
+          Path('/tmp/apply-spa.b64').write_text(match.group(1) + '\n')
           PY
           base64 -d /tmp/apply-spa.b64 | gzip -d > /tmp/apply_spa_pr1_closeout.py
           python -m py_compile /tmp/apply_spa_pr1_closeout.py
