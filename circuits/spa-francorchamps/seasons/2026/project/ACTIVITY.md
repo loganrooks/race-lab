@@ -78,10 +78,30 @@ mutation: append-only
 
 **Verification:** targeted `python3 -m unittest tests/test_project_control.py -v` passed 8/8. `python3 scripts/verify_project_control.py` passed. A reconstructed checkout ran `bash scripts/verify.sh` with Python 3.13.5, pytest 9.0.2, and Ruff 0.15.21; canonical paths, project records, shell syntax, Python compilation, Ruff, and 8 tests passed. ShellCheck was unavailable and explicitly skipped. This is local verification, not scientific model validation or CI confirmation.
 
-**Publication / remote actions:** the verified files were built on `staging/spa-project-control-20260715`; the PR branch is advanced once to the complete staging head rather than receiving partial file states. The last material staging commit before the record files was `6bdc71ae331f9387f353589f59cfdff5ba0461d7`.
+**Publication / remote actions:** the verified files were built on `staging/spa-project-control-20260715`; the PR branch was advanced once to the complete staging head rather than receiving partial file states. The last material staging commit before the record files was `6bdc71ae331f9387f353589f59cfdff5ba0461d7`.
 
 **Result:** the repository now has durable project continuity records and automated maintenance checks. The twelve fresh Codex findings remain unresolved and no production calibration functionality was implemented.
 
 **Next action:** verify and disposition `DATA-01` against the current data-pipeline plan before editing.
 
 **Lessons review:** no-new-lesson; enforcement implements `L-001` through `L-007`.
+
+## A-005 — 2026-07-15T22:28:08Z — Remote readback and CI confirmation
+
+**Evidence status:** pushed; remotely-observed; CI-confirmed for material head `1d19f234f5d7edeabfbf86ceccc88c1aac49f620`.
+
+**Starting state:** the PR branch had been advanced to `1d19f234f5d7edeabfbf86ceccc88c1aac49f620`; the living status still recorded CI as pending.
+
+**Work performed:** read back PR #1, confirmed its head, retrieved the associated workflow run, and synchronized the living records with the direct evidence.
+
+**Files changed:** `project/ACTIVITY.md` and `project/STATUS.md` only.
+
+**Verification:** GitHub Actions workflow `Verify`, run ID `29455470610`, run number 2, completed successfully for `1d19f234f5d7edeabfbf86ceccc88c1aac49f620`.
+
+**Publication / remote actions:** record synchronization was prepared on `staging/spa-project-control-20260715` and the PR branch was advanced once to the synchronized record head.
+
+**Result:** the project-control publication is remotely observed and CI-confirmed for the recorded material head. The twelve fresh Codex findings remain the active work.
+
+**Next action:** verify and disposition `DATA-01` against the current data-pipeline plan before editing.
+
+**Lessons review:** no-new-lesson; the retained workflow ID demonstrates the `L-006` evidence guardrail.
