@@ -1,0 +1,617 @@
+{
+  "pull_request": 1,
+  "threads": [
+    {
+      "comment_id": 3588678442,
+      "created_at": "2026-07-15T15:38:52Z",
+      "is_outdated": true,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RJ-fK",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Clamp the resampling grid to the track length**"
+    },
+    {
+      "comment_id": 3588678447,
+      "created_at": "2026-07-15T15:38:52Z",
+      "is_outdated": true,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RJ-fO",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Use keyword arguments for EventSpec**"
+    },
+    {
+      "comment_id": 3588678453,
+      "created_at": "2026-07-15T15:38:52Z",
+      "is_outdated": true,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RJ-fR",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Use raw progress to classify incomplete laps**"
+    },
+    {
+      "comment_id": 3588678457,
+      "created_at": "2026-07-15T15:38:52Z",
+      "is_outdated": true,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RJ-fW",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Preserve track geometry when resampling traces**"
+    },
+    {
+      "comment_id": 3588678462,
+      "created_at": "2026-07-15T15:38:52Z",
+      "is_outdated": true,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RJ-fa",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Make lap_time_s match the emitted trace timeline**"
+    },
+    {
+      "comment_id": 3588678468,
+      "created_at": "2026-07-15T15:38:52Z",
+      "is_outdated": true,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RJ-fd",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Prevent deployment from spending future regen**"
+    },
+    {
+      "comment_id": 3588678474,
+      "created_at": "2026-07-15T15:38:53Z",
+      "is_outdated": false,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RJ-fi",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Carry phase distances into Spa feature rows**"
+    },
+    {
+      "comment_id": 3588678476,
+      "created_at": "2026-07-15T15:38:53Z",
+      "is_outdated": true,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RJ-fk",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Reject incomplete released artifacts in validation**"
+    },
+    {
+      "comment_id": 3588678480,
+      "created_at": "2026-07-15T15:38:53Z",
+      "is_outdated": true,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RJ-fo",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Avoid emitting a zero-length full-power phase**"
+    },
+    {
+      "comment_id": 3588678485,
+      "created_at": "2026-07-15T15:38:53Z",
+      "is_outdated": true,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RJ-fs",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Store braking onset relative to the corner, not the phase**"
+    },
+    {
+      "comment_id": 3588678489,
+      "created_at": "2026-07-15T15:38:53Z",
+      "is_outdated": true,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RJ-fw",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Aggregate validation by coherent laps**"
+    },
+    {
+      "comment_id": 3588678490,
+      "created_at": "2026-07-15T15:38:53Z",
+      "is_outdated": true,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RJ-fy",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Apply the learned non-speed corrections**"
+    },
+    {
+      "comment_id": 3588873521,
+      "created_at": "2026-07-15T16:05:22Z",
+      "is_outdated": false,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-app-integration.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RKgmD",
+      "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Validate artifacts before bundling released status**"
+    },
+    {
+      "comment_id": 3588873527,
+      "created_at": "2026-07-15T16:05:22Z",
+      "is_outdated": true,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RKgmJ",
+      "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Resolve sessions with a circuit-unique key**"
+    },
+    {
+      "comment_id": 3588873531,
+      "created_at": "2026-07-15T16:05:22Z",
+      "is_outdated": true,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RKgmM",
+      "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Recompute path distance after changing the line**"
+    },
+    {
+      "comment_id": 3588873536,
+      "created_at": "2026-07-15T16:05:23Z",
+      "is_outdated": true,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RKgmP",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Preserve the observed year for analogues**"
+    },
+    {
+      "comment_id": 3588873540,
+      "created_at": "2026-07-15T16:05:23Z",
+      "is_outdated": true,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-app-integration.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RKgmS",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Normalize OpenF1 reference channel names**"
+    },
+    {
+      "comment_id": 3588873544,
+      "created_at": "2026-07-15T16:05:23Z",
+      "is_outdated": false,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RKgmV",
+      "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Require temporal gates before release**"
+    },
+    {
+      "comment_id": 3588873551,
+      "created_at": "2026-07-15T16:05:23Z",
+      "is_outdated": true,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RKgmb",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Preserve joint outcome uncertainty across draws**"
+    },
+    {
+      "comment_id": 3588873557,
+      "created_at": "2026-07-15T16:05:23Z",
+      "is_outdated": true,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RKgmg",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Use configured geometry paths when loading tracks**"
+    },
+    {
+      "comment_id": 3588873563,
+      "created_at": "2026-07-15T16:05:23Z",
+      "is_outdated": true,
+      "is_resolved": true,
+      "path": "scripts/verify.sh",
+      "thread_id": "PRRT_kwDOTZdGvM6RKgmm",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Make canonical verification pass with ruff installed**"
+    },
+    {
+      "comment_id": 3588873567,
+      "created_at": "2026-07-15T16:05:23Z",
+      "is_outdated": true,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RKgmq",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Filter candidate laps by declared qualifying segment**"
+    },
+    {
+      "comment_id": 3588873575,
+      "created_at": "2026-07-15T16:05:23Z",
+      "is_outdated": false,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RKgmu",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Require release provenance fields before checksumming**"
+    },
+    {
+      "comment_id": 3590511747,
+      "created_at": "2026-07-15T20:24:47Z",
+      "is_outdated": false,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RO8Rw",
+      "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Preserve lap_slug in validation joins**"
+    },
+    {
+      "comment_id": 3590511751,
+      "created_at": "2026-07-15T20:24:47Z",
+      "is_outdated": true,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RO8Ry",
+      "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Run full release validation before checksumming**"
+    },
+    {
+      "comment_id": 3590511755,
+      "created_at": "2026-07-15T20:24:47Z",
+      "is_outdated": true,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RO8R2",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Populate event metadata before live refresh**"
+    },
+    {
+      "comment_id": 3590511761,
+      "created_at": "2026-07-15T20:24:47Z",
+      "is_outdated": false,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RO8R8",
+      "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Carry every configured release gate into validation**"
+    },
+    {
+      "comment_id": 3590511764,
+      "created_at": "2026-07-15T20:24:47Z",
+      "is_outdated": true,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RO8R-",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Call geometry loader with its declared arguments**"
+    },
+    {
+      "comment_id": 3590511766,
+      "created_at": "2026-07-15T20:24:47Z",
+      "is_outdated": false,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RO8SA",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Reconcile control-constraint solver argument**"
+    },
+    {
+      "comment_id": 3590511768,
+      "created_at": "2026-07-15T20:24:47Z",
+      "is_outdated": true,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-app-integration.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RO8SC",
+      "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Validate pending artifacts before bundling**"
+    },
+    {
+      "comment_id": 3590511775,
+      "created_at": "2026-07-15T20:24:47Z",
+      "is_outdated": true,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-app-integration.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RO8SI",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Remove legacy telemetry keys after normalization**"
+    },
+    {
+      "comment_id": 3590511777,
+      "created_at": "2026-07-15T20:24:47Z",
+      "is_outdated": true,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RO8SK",
+      "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Measure raw coverage before renormalizing progress**"
+    },
+    {
+      "comment_id": 3590511780,
+      "created_at": "2026-07-15T20:24:47Z",
+      "is_outdated": true,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RO8SN",
+      "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Integrate elapsed time over actual track segments**"
+    },
+    {
+      "comment_id": 3590511786,
+      "created_at": "2026-07-15T20:24:47Z",
+      "is_outdated": false,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RO8SR",
+      "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Require complete profile draws for field best**"
+    },
+    {
+      "comment_id": 3590511791,
+      "created_at": "2026-07-15T20:24:47Z",
+      "is_outdated": true,
+      "is_resolved": true,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-app-integration.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RO8SV",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Make the released schema fixture satisfy release checks**"
+    },
+    {
+      "comment_id": 3591229366,
+      "created_at": "2026-07-15T22:40:42Z",
+      "is_outdated": true,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/project/STATUS.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RQ31i",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Record the reviewed head before claiming CI**"
+    },
+    {
+      "comment_id": 3591229370,
+      "created_at": "2026-07-15T22:40:42Z",
+      "is_outdated": false,
+      "is_resolved": false,
+      "path": "scripts/verify_project_control.py",
+      "thread_id": "PRRT_kwDOTZdGvM6RQ31m",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Accept the documented no-new-lesson marker**"
+    },
+    {
+      "comment_id": 3591229372,
+      "created_at": "2026-07-15T22:40:42Z",
+      "is_outdated": true,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RQ31o",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Instantiate the test track before resampling**"
+    },
+    {
+      "comment_id": 3591229373,
+      "created_at": "2026-07-15T22:40:42Z",
+      "is_outdated": true,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RQ31p",
+      "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Charge ERS deployment on the first segment**"
+    },
+    {
+      "comment_id": 3591229376,
+      "created_at": "2026-07-15T22:40:42Z",
+      "is_outdated": true,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RQ31r",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Read the phase-distance fields actually produced**"
+    },
+    {
+      "comment_id": 3591229378,
+      "created_at": "2026-07-15T22:40:42Z",
+      "is_outdated": false,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RQ31t",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Supply corpus eligibility checksums**"
+    },
+    {
+      "comment_id": 3591229380,
+      "created_at": "2026-07-15T22:40:42Z",
+      "is_outdated": true,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RQ31v",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Treat resampled sectors as discrete labels**"
+    },
+    {
+      "comment_id": 3591229382,
+      "created_at": "2026-07-15T22:40:42Z",
+      "is_outdated": true,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-app-integration.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RQ31x",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Render every phase for the selected complex**"
+    },
+    {
+      "comment_id": 3591229385,
+      "created_at": "2026-07-15T22:40:42Z",
+      "is_outdated": false,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RQ31z",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Fill required feature metadata in the unit test**"
+    },
+    {
+      "comment_id": 3591229386,
+      "created_at": "2026-07-15T22:40:42Z",
+      "is_outdated": true,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RQ311",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Use season-specific event windows**"
+    },
+    {
+      "comment_id": 3591229390,
+      "created_at": "2026-07-15T22:40:42Z",
+      "is_outdated": true,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RQ314",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Reject unsupported artifact statuses**"
+    },
+    {
+      "comment_id": 3591396962,
+      "created_at": "2026-07-15T23:19:35Z",
+      "is_outdated": false,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RRUfK",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Import RawCoverage before defining alignment coverage**"
+    },
+    {
+      "comment_id": 3591396965,
+      "created_at": "2026-07-15T23:19:35Z",
+      "is_outdated": false,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RRUfL",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Populate geometry fields required by the loader**"
+    },
+    {
+      "comment_id": 3591396968,
+      "created_at": "2026-07-15T23:19:36Z",
+      "is_outdated": false,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RRUfN",
+      "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Conjoin each release report's pass flag**"
+    },
+    {
+      "comment_id": 3591396971,
+      "created_at": "2026-07-15T23:19:36Z",
+      "is_outdated": false,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RRUfP",
+      "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Preserve profile identity in field-best samples**"
+    },
+    {
+      "comment_id": 3591396977,
+      "created_at": "2026-07-15T23:19:36Z",
+      "is_outdated": false,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-app-integration.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RRUfU",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Validate the full released interval in the browser**"
+    },
+    {
+      "comment_id": 3591396981,
+      "created_at": "2026-07-15T23:19:36Z",
+      "is_outdated": false,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RRUfY",
+      "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Store the trace for the sampled attempt**"
+    },
+    {
+      "comment_id": 3591396984,
+      "created_at": "2026-07-15T23:19:36Z",
+      "is_outdated": false,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-app-integration.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RRUfZ",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Require released field-best trace data**"
+    },
+    {
+      "comment_id": 3591396987,
+      "created_at": "2026-07-15T23:19:36Z",
+      "is_outdated": true,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/project/STATUS.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RRUfb",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Align the publication state before handoff**"
+    },
+    {
+      "comment_id": 3591396989,
+      "created_at": "2026-07-15T23:19:36Z",
+      "is_outdated": false,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RRUfd",
+      "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Verify geometry content against its manifest checksum**"
+    },
+    {
+      "comment_id": 3591396990,
+      "created_at": "2026-07-15T23:19:36Z",
+      "is_outdated": false,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RRUfe",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Use analogue evidence fields produced by one upstream frame**"
+    },
+    {
+      "comment_id": 3591396994,
+      "created_at": "2026-07-15T23:19:36Z",
+      "is_outdated": false,
+      "is_resolved": false,
+      "path": "scripts/verify_project_control.py",
+      "thread_id": "PRRT_kwDOTZdGvM6RRUfh",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Check the current activity entry for lesson review**"
+    },
+    {
+      "comment_id": 3591467142,
+      "created_at": "2026-07-15T23:36:50Z",
+      "is_outdated": false,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RRg3e",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Supply geometry_source in the track fixture**"
+    },
+    {
+      "comment_id": 3591467149,
+      "created_at": "2026-07-15T23:36:50Z",
+      "is_outdated": false,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RRg3h",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Default the artifact validator clock**"
+    },
+    {
+      "comment_id": 3591467151,
+      "created_at": "2026-07-15T23:36:50Z",
+      "is_outdated": false,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-15-pr1-closeout-plan.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RRg3k",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Reconcile the completion count with 23 fresh findings**"
+    },
+    {
+      "comment_id": 3591467157,
+      "created_at": "2026-07-15T23:36:50Z",
+      "is_outdated": false,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RRg3n",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Provide raw coverage in quality fixtures**"
+    },
+    {
+      "comment_id": 3591467159,
+      "created_at": "2026-07-15T23:36:51Z",
+      "is_outdated": false,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RRg3p",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Compute feed gaps from observed intervals**"
+    },
+    {
+      "comment_id": 3591467165,
+      "created_at": "2026-07-15T23:36:51Z",
+      "is_outdated": false,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RRg3u",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Exclude missing braking-onset outcomes before averaging**"
+    },
+    {
+      "comment_id": 3591467170,
+      "created_at": "2026-07-15T23:36:51Z",
+      "is_outdated": false,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RRg3z",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Use a complete released artifact fixture**"
+    },
+    {
+      "comment_id": 3591467173,
+      "created_at": "2026-07-15T23:36:51Z",
+      "is_outdated": false,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RRg32",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Declare artifact as a required Typer option**"
+    },
+    {
+      "comment_id": 3591467175,
+      "created_at": "2026-07-15T23:36:51Z",
+      "is_outdated": false,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RRg34",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Verify every required corpus artifact**"
+    },
+    {
+      "comment_id": 3591467178,
+      "created_at": "2026-07-15T23:36:51Z",
+      "is_outdated": false,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RRg37",
+      "title": "**<sub><sub>![P1 Badge](https://img.shields.io/badge/P1-orange?style=flat)</sub></sub>  Apply raw progress reversal to lap acceptance**"
+    },
+    {
+      "comment_id": 3591467181,
+      "created_at": "2026-07-15T23:36:51Z",
+      "is_outdated": false,
+      "is_resolved": false,
+      "path": "circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md",
+      "thread_id": "PRRT_kwDOTZdGvM6RRg3-",
+      "title": "**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Normalize YAML timestamp objects before parsing**"
+    }
+  ]
+}
