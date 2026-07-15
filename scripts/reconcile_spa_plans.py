@@ -57,14 +57,14 @@ required = {
     PLAN_ROOT / "plans/2026-07-14-spa-calibration-model-prediction.md": [
         "rolling-origin",
         "weighted interval score",
-        "residual covariance",
+        "cross-outcome covariance",
         "battery_reserve_kj",
-        "recompute",
+        "distance = np.r_",
     ],
     PLAN_ROOT / "plans/2026-07-14-spa-calibration-app-integration.md": [
         "validateCalibrationArtifact",
-        "normalizeOpenF1Trace",
-        "identical release validation",
+        "legacy `speed/throttle/brake` names",
+        "same release predicate and fixture corpus",
     ],
     reconciliation: [
         "## A. Independent review requirements",
