@@ -566,7 +566,7 @@ from typing import Literal
 from urllib.parse import urlencode
 import asyncio
 import httpx
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 from .cache import ContentAddressedCache
 
 
@@ -577,10 +577,27 @@ class EventSpec(BaseModel):
     country_name: str
     session_name: Literal["Qualifying", "Sprint Qualifying"]
     meeting_key: int | None = None
-    meeting_name: str
-    circuit_short_name: str
-    event_date_start: datetime
-    event_date_end: datetime
+    meeting_name: str | None = None
+    circuit_short_name: str | None = None
+    event_date_start: datetime | None = None
+    event_date_end: datetime | None = None
+
+    @model_validator(mode="after")
+    def require_circuit_unique_identity(self) -> "EventSpec":
+        fallback = (
+            self.meeting_name,
+            self.circuit_short_name,
+            self.event_date_start,
+            self.event_date_end,
+        )
+        if self.meeting_key is None and any(value is None for value in fallback):
+            raise ValueError(
+                "event requires meeting_key or meeting_name, circuit_short_name, "
+                "event_date_start, and event_date_end"
+            )
+        if self.event_date_start and self.event_date_end and self.event_date_end <= self.event_date_start:
+            raise ValueError("event_date_end must follow event_date_start")
+        return self
 
 
 @dataclass(frozen=True)
@@ -640,9 +657,9 @@ class OpenF1Client:
         candidates = [
             row for row in rows
             if row.get("session_name") == spec.session_name
-            and spec.event_date_start <= datetime.fromisoformat(row["date_start"]) <= spec.event_date_end
+            and (spec.meeting_key is not None or spec.event_date_start <= datetime.fromisoformat(row["date_start"]) <= spec.event_date_end)
             and (spec.meeting_key is not None or row.get("meeting_name") == spec.meeting_name)
-            and (not row.get("circuit_short_name") or row.get("circuit_short_name") == spec.circuit_short_name)
+            and (spec.meeting_key is not None or row.get("circuit_short_name") == spec.circuit_short_name)
         ]
         if len(candidates) != 1:
             raise LookupError(f"Expected one circuit-unique session for {spec.circuit_id}, found {len(candidates)}")
@@ -658,17 +675,80 @@ class OpenF1Client:
 ```yaml
 # calibration/config/events.yaml
 seasons: [2024, 2025, 2026]
-events:
-  - {circuit_id: melbourne, country_name: Australia}
-  - {circuit_id: shanghai, country_name: China}
-  - {circuit_id: suzuka, country_name: Japan}
-  - {circuit_id: miami, country_name: United States, meeting_name: Miami Grand Prix, circuit_short_name: Miami, event_date_start: 2026-05-01T00:00:00Z, event_date_end: 2026-05-04T23:59:59Z}
-  - {circuit_id: montreal, country_name: Canada}
-  - {circuit_id: monaco, country_name: Monaco}
-  - {circuit_id: barcelona, country_name: Spain}
-  - {circuit_id: spielberg, country_name: Austria}
-  - {circuit_id: silverstone, country_name: Great Britain}
 sessions: [Qualifying]
+events:
+  - circuit_id: melbourne
+    country_name: Australia
+    meeting_name: Australian Grand Prix
+    circuit_short_name: Melbourne
+    event_date_windows:
+      2024: {start: 2024-03-01T00:00:00Z, end: 2024-04-01T00:00:00Z}
+      2025: {start: 2025-03-01T00:00:00Z, end: 2025-04-01T00:00:00Z}
+      2026: {start: 2026-03-01T00:00:00Z, end: 2026-04-01T00:00:00Z}
+  - circuit_id: shanghai
+    country_name: China
+    meeting_name: Chinese Grand Prix
+    circuit_short_name: Shanghai
+    event_date_windows:
+      2024: {start: 2024-04-01T00:00:00Z, end: 2024-05-01T00:00:00Z}
+      2025: {start: 2025-03-01T00:00:00Z, end: 2025-05-01T00:00:00Z}
+      2026: {start: 2026-03-01T00:00:00Z, end: 2026-05-01T00:00:00Z}
+  - circuit_id: suzuka
+    country_name: Japan
+    meeting_name: Japanese Grand Prix
+    circuit_short_name: Suzuka
+    event_date_windows:
+      2024: {start: 2024-03-15T00:00:00Z, end: 2024-05-01T00:00:00Z}
+      2025: {start: 2025-03-15T00:00:00Z, end: 2025-05-01T00:00:00Z}
+      2026: {start: 2026-03-01T00:00:00Z, end: 2026-05-01T00:00:00Z}
+  - circuit_id: miami
+    country_name: United States
+    meeting_name: Miami Grand Prix
+    circuit_short_name: Miami
+    event_date_windows:
+      2024: {start: 2024-04-15T00:00:00Z, end: 2024-06-01T00:00:00Z}
+      2025: {start: 2025-04-15T00:00:00Z, end: 2025-06-01T00:00:00Z}
+      2026: {start: 2026-04-15T00:00:00Z, end: 2026-06-01T00:00:00Z}
+  - circuit_id: montreal
+    country_name: Canada
+    meeting_name: Canadian Grand Prix
+    circuit_short_name: Montreal
+    event_date_windows:
+      2024: {start: 2024-05-15T00:00:00Z, end: 2024-07-01T00:00:00Z}
+      2025: {start: 2025-05-15T00:00:00Z, end: 2025-07-01T00:00:00Z}
+      2026: {start: 2026-05-15T00:00:00Z, end: 2026-07-01T00:00:00Z}
+  - circuit_id: monaco
+    country_name: Monaco
+    meeting_name: Monaco Grand Prix
+    circuit_short_name: Monaco
+    event_date_windows:
+      2024: {start: 2024-05-01T00:00:00Z, end: 2024-06-15T00:00:00Z}
+      2025: {start: 2025-05-01T00:00:00Z, end: 2025-06-15T00:00:00Z}
+      2026: {start: 2026-05-01T00:00:00Z, end: 2026-06-15T00:00:00Z}
+  - circuit_id: barcelona
+    country_name: Spain
+    meeting_name: Spanish Grand Prix
+    circuit_short_name: Barcelona
+    event_date_windows:
+      2024: {start: 2024-05-15T00:00:00Z, end: 2024-07-15T00:00:00Z}
+      2025: {start: 2025-05-15T00:00:00Z, end: 2025-07-15T00:00:00Z}
+      2026: {start: 2026-05-15T00:00:00Z, end: 2026-07-15T00:00:00Z}
+  - circuit_id: spielberg
+    country_name: Austria
+    meeting_name: Austrian Grand Prix
+    circuit_short_name: Spielberg
+    event_date_windows:
+      2024: {start: 2024-06-01T00:00:00Z, end: 2024-07-31T00:00:00Z}
+      2025: {start: 2025-06-01T00:00:00Z, end: 2025-07-31T00:00:00Z}
+      2026: {start: 2026-06-01T00:00:00Z, end: 2026-07-31T00:00:00Z}
+  - circuit_id: silverstone
+    country_name: Great Britain
+    meeting_name: British Grand Prix
+    circuit_short_name: Silverstone
+    event_date_windows:
+      2024: {start: 2024-06-15T00:00:00Z, end: 2024-08-01T00:00:00Z}
+      2025: {start: 2025-06-15T00:00:00Z, end: 2025-08-01T00:00:00Z}
+      2026: {start: 2026-06-15T00:00:00Z, end: 2026-08-01T00:00:00Z}
 ```
 
 - [ ] **Step 4: Run tests and verify GREEN**
@@ -896,7 +976,8 @@ git commit -m "feat(calibration-data): classify qualifying lap quality"
 # calibration/tests/test_alignment.py
 import numpy as np
 import pandas as pd
-from spa_calibration.alignment import align_progress_to_track, resample_aligned_trace
+from spa_calibration.alignment import align_progress_to_track, measure_raw_source_coverage, resample_aligned_trace
+import pytest
 from spa_calibration.geometry import CanonicalTrack
 
 
@@ -951,6 +1032,19 @@ def test_resampling_emits_fixed_distance_grid_and_interpolates_channels() -> Non
     assert result["distance_m"].tolist() == [0, 5, 10, 15, 20]
     assert result.loc[result.distance_m == 5, "speed_kph"].item() == 125
     assert result.loc[result.distance_m == 5, "gear"].item() == 2
+
+
+def test_middle_sixty_percent_is_not_stretched_to_a_complete_lap() -> None:
+    location = pd.DataFrame({
+        "elapsed_s": [0, 1, 2, 3],
+        "progress_raw": [.20, .40, .60, .80],
+        "speed_kph": [200, 210, 220, 230],
+    })
+    coverage = measure_raw_source_coverage(location, required_channels=("speed_kph",))
+    aligned = align_progress_to_track(location, track())
+    assert coverage.coverage_ratio == pytest.approx(.60)
+    assert aligned.progress.iloc[-1] == pytest.approx(.60)
+    assert coverage.coverage_ratio < .94
 ```
 
 - [ ] **Step 2: Run tests and verify RED**
@@ -982,6 +1076,29 @@ from scipy.spatial import cKDTree
 
 
 @dataclass(frozen=True)
+class GeometrySource:
+    path: Path
+    format: str
+    source_name: str
+    source_license: str
+    checksum: str
+
+    @classmethod
+    def from_manifest(cls, row: dict[str, object], config_root: Path) -> "GeometrySource":
+        required = {"geometry", "geometry_format", "source", "source_license", "checksum"}
+        missing = required - row.keys()
+        if missing:
+            raise ValueError(f"geometry manifest missing fields: {sorted(missing)}")
+        return cls(
+            path=(config_root / str(row["geometry"])).resolve(),
+            format=str(row["geometry_format"]),
+            source_name=str(row["source"]),
+            source_license=str(row["source_license"]),
+            checksum=str(row["checksum"]),
+        )
+
+
+@dataclass(frozen=True)
 class CanonicalTrack:
     circuit_id: str
     length_m: float
@@ -993,10 +1110,19 @@ class CanonicalTrack:
     curvature_per_m: NDArray[np.float64]
     gradient: NDArray[np.float64]
     sector: NDArray[np.int16]
+    geometry_source: GeometrySource
 
 
-def load_canonical_track(circuit_id: str, csv_path: Path) -> CanonicalTrack:
-    frame = pd.read_csv(csv_path).sort_values("distance_m").reset_index(drop=True)
+def _read_geometry_frame(source: GeometrySource) -> pd.DataFrame:
+    if source.format == "csv":
+        return pd.read_csv(source.path)
+    if source.format == "spa-reference-json":
+        return adapt_spa_reference_geometry(source.path)
+    raise ValueError(f"unsupported geometry format: {source.format}")
+
+
+def load_canonical_track(circuit_id: str, source: GeometrySource) -> CanonicalTrack:
+    frame = _read_geometry_frame(source).sort_values("distance_m").reset_index(drop=True)
     required = {"distance_m", "x_m", "y_m", "elevation_m", "sector"}
     missing = required - set(frame.columns)
     if missing:
@@ -1019,6 +1145,7 @@ def load_canonical_track(circuit_id: str, csv_path: Path) -> CanonicalTrack:
         curvature_per_m=curvature,
         gradient=gradient,
         sector=frame.sector.to_numpy(np.int16),
+        geometry_source=source,
     )
 ```
 
@@ -1027,7 +1154,7 @@ def load_canonical_track(circuit_id: str, csv_path: Path) -> CanonicalTrack:
 import numpy as np
 import pandas as pd
 from scipy.spatial import cKDTree
-from .geometry import CanonicalTrack
+from .geometry import CanonicalTrack, GeometrySource
 
 
 def project_locations_to_track(location: pd.DataFrame, track: CanonicalTrack) -> pd.DataFrame:
@@ -1039,18 +1166,41 @@ def project_locations_to_track(location: pd.DataFrame, track: CanonicalTrack) ->
     return result
 
 
+def unwrap_observed_progress(progress_raw: np.ndarray) -> np.ndarray:
+    unwrapped = progress_raw.astype(float, copy=True)
+    offset = 0.0
+    for index in range(1, len(unwrapped)):
+        if progress_raw[index] + offset < unwrapped[index - 1] - .5:
+            offset += 1.0
+        unwrapped[index] = progress_raw[index] + offset
+    return unwrapped - unwrapped[0]
+
+
+def measure_raw_source_coverage(location: pd.DataFrame, required_channels: tuple[str, ...]) -> RawCoverage:
+    observed = unwrap_observed_progress(location["progress_raw"].to_numpy(float))
+    coverage = float(np.clip(observed[-1], 0.0, 1.0)) if len(observed) else 0.0
+    elapsed = location["elapsed_s"].to_numpy(float)
+    gaps = np.diff(elapsed) if len(elapsed) > 1 else np.array([float("inf")])
+    reversals = np.maximum(0.0, -np.diff(observed)) if len(observed) > 1 else np.array([1.0])
+    channel_coverage = {
+        channel: float(location[channel].notna().mean()) if channel in location else 0.0
+        for channel in required_channels
+    }
+    return RawCoverage(
+        progress_start=0.0,
+        progress_end=coverage,
+        coverage_ratio=coverage,
+        channel_coverage=channel_coverage,
+        maximum_gap_s=float(gaps.max(initial=0.0)),
+        maximum_progress_reversal=float(reversals.max(initial=0.0)),
+    )
+
+
 def align_progress_to_track(location: pd.DataFrame, track: CanonicalTrack) -> pd.DataFrame:
     result = location.sort_values("elapsed_s").copy()
-    raw = result["progress_raw"].to_numpy(float)
-    unwrapped = raw.copy()
-    offset = 0.0
-    for index in range(1, len(raw)):
-        if raw[index] + offset < unwrapped[index - 1] - .5:
-            offset += 1.0
-        unwrapped[index] = raw[index] + offset
-    unwrapped -= unwrapped[0]
-    span = unwrapped[-1] or 1.0
-    result["progress"] = np.maximum.accumulate(np.clip(unwrapped / span, 0, 1))
+    observed = unwrap_observed_progress(result["progress_raw"].to_numpy(float))
+    result["progress_observed"] = observed
+    result["progress"] = np.maximum.accumulate(np.clip(observed, 0.0, 1.0))
     result["distance_m"] = result["progress"] * track.length_m
     return result
 
@@ -1709,11 +1859,11 @@ import asyncio
 import orjson
 import pandas as pd
 import yaml
-from .alignment import align_progress_to_track, project_locations_to_track, resample_aligned_trace
+from .alignment import align_progress_to_track, measure_raw_source_coverage, project_locations_to_track, resample_aligned_trace
 from .cache import ContentAddressedCache
 from .corpus import write_corpus
 from .features import extract_phase_features
-from .geometry import load_canonical_track
+from .geometry import GeometrySource, load_canonical_track
 from .openf1 import EventSpec, OpenF1Client
 from .phases import ComplexSpec, detect_complex_phases
 from .quality import LapContext, classify_lap
@@ -1790,7 +1940,8 @@ def build_corpus_from_bundles(bundles, circuits_config: Path, output: Path, gene
     for session_bundle in bundles:
         circuit_id = session_bundle["event"]["circuit_id"]
         geometry_row = circuit_rows[circuit_id]
-        track = load_canonical_track(circuit_id, Path(geometry_row["geometry"]), geometry_row)
+        geometry_source = GeometrySource.from_manifest(geometry_row, config_root=circuits_config.parent)
+        track = load_canonical_track(circuit_id, geometry_source)
         drivers = {int(row["driver_number"]): row for row in session_bundle["drivers"]}
         for lap_bundle in session_bundle["lap_bundles"]:
             lap = lap_bundle["lap"]
@@ -1798,8 +1949,11 @@ def build_corpus_from_bundles(bundles, circuits_config: Path, output: Path, gene
             end = start + timedelta(seconds=float(lap["lap_duration"]))
             coupled = couple_channels(lap_bundle["car_data"], lap_bundle["location"], start)
             projected = project_locations_to_track(coupled, track)
+            raw_coverage = measure_raw_source_coverage(
+                projected,
+                required_channels=eligibility.required_channels(circuit_id, session_bundle["event"]["season"]),
+            )
             aligned = align_progress_to_track(projected, track)
-            raw_coverage = measure_raw_source_coverage(coupled, aligned, required_channels=eligibility.required_channels(circuit_id, session_bundle["event"]["season"]))
             quality = classify_lap(
                 float(lap["lap_duration"]), aligned,
                 LapContext(
@@ -1951,14 +2105,20 @@ async def build_live_corpus(events_path: Path, circuits_path: Path, raw_cache: P
     bundles = []
     for season in event_config["seasons"]:
         for event in event_config["events"]:
+            window = event.get("event_date_windows", {}).get(season) or event.get("event_date_windows", {}).get(str(season))
             for session_name in event_config["sessions"]:
-                spec = EventSpec(
-                    season=season, circuit_id=event["circuit_id"], country_name=event["country_name"],
-                    session_name=session_name, meeting_key=event.get("meeting_key"),
-                    meeting_name=event["meeting_name"], circuit_short_name=event["circuit_short_name"],
-                    event_date_start=datetime.fromisoformat(event["event_date_start"]),
-                    event_date_end=datetime.fromisoformat(event["event_date_end"]),
-                )
+                payload = {
+                    "season": season,
+                    "circuit_id": event["circuit_id"],
+                    "country_name": event["country_name"],
+                    "session_name": session_name,
+                    "meeting_key": event.get("meeting_keys", {}).get(season) or event.get("meeting_keys", {}).get(str(season)),
+                    "meeting_name": event.get("meeting_name"),
+                    "circuit_short_name": event.get("circuit_short_name"),
+                    "event_date_start": datetime.fromisoformat(window["start"]) if window else None,
+                    "event_date_end": datetime.fromisoformat(window["end"]) if window else None,
+                }
+                spec = EventSpec.model_validate(payload)
                 session_bundle = await fetch_session_bundle(client, spec)
                 drivers = {int(row["driver_number"]): row for row in session_bundle["drivers"]}
                 enriched_laps = [{**lap, "team_name": drivers.get(int(lap["driver_number"]), {}).get("team_name")} for lap in session_bundle["laps"]]

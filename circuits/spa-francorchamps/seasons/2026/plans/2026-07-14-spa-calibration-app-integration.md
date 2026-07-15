@@ -107,30 +107,48 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { pendingCalibrationArtifact, validateCalibrationArtifact } from '../js/calibration-schema.js';
 
-const released = {
-  schemaVersion: 'spa-calibration-prediction/v1',
-  status: 'released',
-  modelVersion: 'spa-corner-transfer/0.1.0',
-  generatedAt: '2026-07-14T00:00:00Z',
-  sourceCutoff: '2026-07-13T23:59:59Z',
-  fieldBest: { lapTimeSeconds: { lower80: 100, median: 101, upper80: 102 } },
-  teams: [], historicalReferences: [], analogueTraces: [], corners: [],
-  validation: { release_gates: { passed: true, checks: {} } },
-  provenance: {}, checksum: 'a'.repeat(64)
-};
+const NOW = new Date('2026-07-15T00:00:00Z');
+const REPORT_NAMES = ['loco', 'rollingOrigin', 'uncertaintyCalibration', 'baselinesAblations', 'identifiability', 'physicalFeasibility', 'eligibility'];
+
+function releasedFixture(overrides = {}) {
+  const reports = Object.fromEntries(REPORT_NAMES.map((name) => [name, { passed: true, checks: { complete: true } }]));
+  return {
+    schemaVersion: 'spa-calibration-prediction/v1',
+    status: 'released',
+    modelVersion: 'spa-corner-transfer/0.1.0',
+    generatedAt: '2026-07-14T00:00:00Z',
+    sourceCutoff: '2026-07-13T23:59:59Z',
+    fieldBest: { lapTimeSeconds: { lower95: 99, lower80: 100, median: 101, upper80: 102, upper95: 103 } },
+    teams: [], historicalReferences: [], analogueTraces: [], corners: [],
+    validation: { release_gates: { passed: true, checks: { all: true } }, reports },
+    provenance: {
+      trainingManifestChecksum: '1'.repeat(64), sourceEligibilityChecksum: '2'.repeat(64),
+      circuitYearEligibilityChecksum: '3'.repeat(64), scenarioChecksum: '4'.repeat(64),
+      randomSeed: 7, regulationIdentifiers: ['2026'], hyperparameters: {},
+      trainingCircuits: ['silverstone'], heldOutCircuits: ['spa'],
+      validationReportChecksums: {}, codeCommit: 'a'.repeat(40),
+      scenario: { id: 'spa-2026-dry-qualifying-reference/v1', attempts: 2 }
+    },
+    checksum: 'a'.repeat(64),
+    ...overrides,
+  };
+}
+
+const released = releasedFixture();
+const validate = (value) => validateCalibrationArtifact(value, { now: NOW });
 
 test('released artifact requires ordered field-best interval', () => {
-  assert.equal(validateCalibrationArtifact(released).status, 'released');
-  assert.throws(() => validateCalibrationArtifact({
+  assert.equal(validate(released).status, 'released');
+  assert.throws(() => validate({
     ...released,
     fieldBest: { lapTimeSeconds: { lower80: 102, median: 101, upper80: 100 } }
   }), /interval/i);
 });
 
 test('non-released artifacts cannot expose field best', () => {
-  assert.throws(() => validateCalibrationArtifact({ ...released, status: 'failed-validation' }), /fieldBest/i);
+  assert.throws(() => validate({ ...released, status: 'failed-validation' }), /fieldBest/i);
   assert.equal(pendingCalibrationArtifact('missing').fieldBest, null);
-  assert.throws(() => validateCalibrationArtifact({ ...released, checksum: 'bad' }), /checksum/i);
+  assert.throws(() => validate({ ...released, checksum: 'bad' }), /checksum/i);
 });
 ```
 
@@ -200,8 +218,10 @@ export function validateCalibrationArtifact(value, { now = new Date(), maximumAg
   if (!value || value.schemaVersion !== SCHEMA) throw new TypeError('Unsupported calibration schema');
   if (!STATUS.has(value.status)) throw new TypeError('Invalid calibration status');
   if (value.status !== 'pending' && !/^[0-9a-f]{64}$/.test(value.checksum || '')) throw new TypeError('Invalid calibration checksum');
-  if (value.status !== 'released' && value.fieldBest !== null) {
-    throw new TypeError('Non-released calibration artifact must suppress fieldBest');
+  if (value.status !== 'released') {
+    if (value.fieldBest !== null || value.teams?.length || value.corners?.length) {
+      throw new TypeError('Non-released calibration artifact must suppress fieldBest, teams, and predicted corners');
+    }
   }
   if (value.status === 'released') {
     if (value.validation?.release_gates?.passed !== true) throw new TypeError('Released artifact requires passing release gates');
@@ -259,8 +279,8 @@ try {
     const { checksum, ...unsigned } = artifact;
     const actual = createHash('sha256').update(canonicalJson(unsigned)).digest('hex');
     if (checksum !== actual) throw new Error(`checksum mismatch ${checksum} != ${actual}`);
-    artifact = validateCalibrationArtifact(artifact, { now: generatedAt, maximumAgeHours: 24 * 7 });
   }
+  artifact = validateCalibrationArtifact(artifact, { now: generatedAt, maximumAgeHours: 24 * 7 });
 } catch (error) {
   artifact = pending(error.code === 'ENOENT' ? 'missing' : 'invalid-or-unverified');
 }
@@ -409,12 +429,15 @@ export function buildTraceSources({ simulation, calibration, references }) {
       label: `${reference.driver.name} · ${reference.year} ${reference.sessionName}`,
       kind: 'historical',
       spatialRoute: 'reference-racing-line',
-      trace: reference.trace.map((sample) => ({
-        ...sample,
-        speedKph: sample.speedKph ?? sample.speed,
-        throttlePct: sample.throttlePct ?? sample.throttle,
-        brakePct: sample.brakePct ?? sample.brake,
-      })),
+      trace: reference.trace.map((sample) => {
+        const { speed, throttle, brake, ...rest } = sample;
+        return {
+          ...rest,
+          speedKph: sample.speedKph ?? speed,
+          throttlePct: sample.throttlePct ?? throttle,
+          brakePct: sample.brakePct ?? brake,
+        };
+      }),
       timingTable: reference.timingTable,
       lapTimeSeconds: reference.lapTimeSeconds,
       interval: null,

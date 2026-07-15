@@ -718,6 +718,7 @@ git commit -m "feat(calibration-model): fit partially pooled phase deltas"
 ```python
 # calibration/tests/test_vehicle_prior.py
 import pandas as pd
+import pytest
 from spa_calibration.vehicle_prior import VehicleParameters, simulate_lap
 
 
@@ -730,6 +731,8 @@ def test_speed_controls_energy_and_time_come_from_same_solution() -> None:
     assert ((trace.throttle_pct == 0) | (trace.brake_pct < 5)).mean() > .95
     assert trace.battery_kj.between(0, solution.parameters.energy_window_kj).all()
     assert abs(solution.lap_time_s - trace.elapsed_s.iloc[-1]) < 1e-6
+    expected = float(np.sum(np.diff(line.distance_m) / ((trace.speed_kph.iloc[:-1].to_numpy() + trace.speed_kph.iloc[1:].to_numpy()) / 7.2)))
+    assert solution.lap_time_s == pytest.approx(expected)
 
 
 def test_smaller_energy_window_reduces_deployment_and_does_not_break_battery_bounds() -> None:
@@ -819,6 +822,20 @@ class VehicleParameters:
         )
 
 
+
+@dataclass(frozen=True)
+class ControlConstraints:
+    maximum_speed_ms: np.ndarray
+
+    @classmethod
+    def unconstrained(cls, sample_count: int) -> "ControlConstraints":
+        return cls(maximum_speed_ms=np.full(sample_count, np.inf))
+
+    def validate(self, sample_count: int) -> None:
+        if self.maximum_speed_ms.shape != (sample_count,):
+            raise ValueError("control constraint length must match line samples")
+
+
 @dataclass(frozen=True)
 class LapSolution:
     lap_time_s: float
@@ -849,10 +866,12 @@ def _solve_speed_envelope(
     parameters: VehicleParameters,
     lateral_limit: np.ndarray,
     deploy_fraction: np.ndarray,
+    control_constraints: ControlConstraints,
 ) -> np.ndarray:
     distance = frame.distance_m.to_numpy(float)
-    ds = np.diff(distance, append=distance[-1] + np.median(np.diff(distance)))
-    speed = lateral_limit.copy()
+    ds = np.diff(distance)
+    control_constraints.validate(len(frame))
+    speed = np.minimum(lateral_limit, control_constraints.maximum_speed_ms).copy()
     curvature = np.abs(frame.curvature_per_m.to_numpy(float))
     for _ in range(6):
         for index in range(1, len(speed)):
@@ -874,10 +893,14 @@ def _solve_speed_envelope(
 
 
 def _derive_controls(speed: np.ndarray, distance: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    ds = np.diff(distance, append=distance[-1] + np.median(np.diff(distance)))
-    dt = ds / np.maximum(speed, 1)
-    elapsed = np.cumsum(dt) - dt[0]
-    acceleration = np.gradient(speed, np.maximum(elapsed, 1e-6))
+    if len(distance) != len(speed) or len(distance) < 2:
+        raise ValueError("speed and distance require matching samples")
+    ds = np.diff(distance)
+    segment_speed = np.maximum((speed[:-1] + speed[1:]) / 2, 1.0)
+    segment_dt = ds / segment_speed
+    dt = np.r_[0.0, segment_dt]
+    elapsed = np.r_[0.0, np.cumsum(segment_dt)]
+    acceleration = np.gradient(speed, elapsed, edge_order=1)
     positive = np.maximum(acceleration, 0)
     negative = np.maximum(-acceleration, 0)
     throttle = np.clip(positive / max(np.quantile(positive, .95), 1e-6) * 100, 0, 100)
@@ -918,7 +941,7 @@ def simulate_lap(line: pd.DataFrame, parameters: VehicleParameters, corrections:
             exit_speed_ms=corrections.exit_speed_correction_ms,
         )
     else:
-        control_constraints = ControlConstraints.unconstrained()
+        control_constraints = ControlConstraints.unconstrained(len(frame))
 
     priority = _deployment_priority(frame, lateral_limit)
     ers_scale = 1.0
@@ -1073,11 +1096,13 @@ def test_piecewise_model_is_rejected_without_held_out_gain() -> None:
 
 ```python
 # calibration/tests/test_validation.py
+from pathlib import Path
+import yaml
 from spa_calibration.validation import ReleaseGates, ValidationMetrics, evaluate_release_gates
 
 
 def test_release_requires_every_metric_and_baseline_improvement() -> None:
-    gates = ReleaseGates(.7, .25, 8, 25, .15, .7, True)
+    gates = ReleaseGates.from_mapping(yaml.safe_load(Path("config/release-gates.yaml").read_text()))
     metrics = ValidationMetrics(
         lap_time_mae_s=.55,
         sector_mae_s=.2,
@@ -1085,6 +1110,9 @@ def test_release_requires_every_metric_and_baseline_improvement() -> None:
         braking_onset_mae_m=18,
         maximum_signed_archetype_bias_s=.08,
         interval_coverage_80=.76,
+        interval_coverage_95=.92,
+        weighted_interval_score=.70,
+        crps_s=.30,
         model_lap_mae_s=.55,
         baseline_lap_mae_s=.72,
     )
@@ -1133,7 +1161,24 @@ class ReleaseGates:
     braking_onset_mae_m: float
     maximum_signed_archetype_bias_s: float
     minimum_interval_coverage_80: float
+    maximum_interval_coverage_80: float
+    minimum_interval_coverage_95: float
+    maximum_weighted_interval_score: float
+    maximum_crps_s: float
     requires_baseline_improvement: bool
+    requires_rolling_origin: bool
+    requires_physical_feasibility: bool
+    requires_identifiability: bool
+
+    @classmethod
+    def from_mapping(cls, payload: dict[str, object]) -> "ReleaseGates":
+        values = {key: value for key, value in payload.items() if key != "schema_version"}
+        expected = set(cls.__dataclass_fields__)
+        unknown = values.keys() - expected
+        missing = expected - values.keys()
+        if unknown or missing:
+            raise ValueError(f"release-gate keys mismatch; missing={sorted(missing)} unknown={sorted(unknown)}")
+        return cls(**values)
 
 
 @dataclass(frozen=True)
@@ -1144,6 +1189,9 @@ class ValidationMetrics:
     braking_onset_mae_m: float
     maximum_signed_archetype_bias_s: float
     interval_coverage_80: float
+    interval_coverage_95: float
+    weighted_interval_score: float
+    crps_s: float
     model_lap_mae_s: float
     baseline_lap_mae_s: float
 
@@ -1161,7 +1209,10 @@ def evaluate_release_gates(metrics: ValidationMetrics, gates: ReleaseGates) -> G
         "minimum_speed_mae": metrics.minimum_speed_mae_kph <= gates.minimum_speed_mae_kph,
         "braking_onset_mae": metrics.braking_onset_mae_m <= gates.braking_onset_mae_m,
         "archetype_bias": abs(metrics.maximum_signed_archetype_bias_s) <= gates.maximum_signed_archetype_bias_s,
-        "interval_coverage": metrics.interval_coverage_80 >= gates.minimum_interval_coverage_80,
+        "interval_coverage_80": gates.minimum_interval_coverage_80 <= metrics.interval_coverage_80 <= gates.maximum_interval_coverage_80,
+        "interval_coverage_95": metrics.interval_coverage_95 >= gates.minimum_interval_coverage_95,
+        "weighted_interval_score": metrics.weighted_interval_score <= gates.maximum_weighted_interval_score,
+        "crps": metrics.crps_s <= gates.maximum_crps_s,
         "baseline_improvement": (not gates.requires_baseline_improvement) or metrics.model_lap_mae_s < metrics.baseline_lap_mae_s,
     }
     return GateEvaluation(all(checks.values()), checks)
@@ -1177,10 +1228,10 @@ from .baselines import circuit_folds
 
 def score_fold(test: pd.DataFrame, prediction: pd.DataFrame, baseline: pd.DataFrame, held_out: str) -> dict[str, object]:
     joined = test[[
-        "pair_id", "archetype", "sector", "delta_phase_time_s", "delta_minimum_speed_kph",
+        "pair_id", "lap_slug", "archetype", "sector", "delta_phase_time_s", "delta_minimum_speed_kph",
         "delta_braking_onset_from_complex_start_m"
     ]].merge(prediction, on="pair_id", validate="one_to_one")
-    baseline_joined = test[["pair_id", "delta_phase_time_s"]].merge(
+    baseline_joined = test[["pair_id", "lap_slug", "delta_phase_time_s"]].merge(
         baseline[["pair_id", "predicted_delta_phase_time_s"]], on="pair_id", validate="one_to_one"
     )
     phase_error = joined.predicted_delta_phase_time_s - joined.delta_phase_time_s
@@ -1214,6 +1265,9 @@ def score_fold(test: pd.DataFrame, prediction: pd.DataFrame, baseline: pd.DataFr
         "braking_onset_absolute_errors_m": np.abs(brake_error).tolist(),
         "archetype_bias_s": {str(key): float(value) for key, value in archetype_bias.items()},
         "interval_coverage_80": float(covered),
+        "interval_coverage_95": float(((joined.delta_phase_time_s >= joined.lower95_delta_phase_time_s) & (joined.delta_phase_time_s <= joined.upper95_delta_phase_time_s)).mean()),
+        "weighted_interval_score": float(weighted_interval_score(joined)),
+        "crps_s": float(crps(joined)),
     }
 
 
@@ -1231,6 +1285,9 @@ def aggregate_fold_metrics(rows: list[dict[str, object]]) -> ValidationMetrics:
         braking_onset_mae_m=float(brake_errors.mean()),
         maximum_signed_archetype_bias_s=float(max(biases, default=0)),
         interval_coverage_80=float(np.mean([row["interval_coverage_80"] for row in rows])),
+        interval_coverage_95=float(np.mean([row["interval_coverage_95"] for row in rows])),
+        weighted_interval_score=float(np.mean([row["weighted_interval_score"] for row in rows])),
+        crps_s=float(np.mean([row["crps_s"] for row in rows])),
         model_lap_mae_s=float(lap_errors.mean()),
         baseline_lap_mae_s=float(baseline_errors.mean()),
     )
@@ -1263,8 +1320,15 @@ def run_loco_validation(
 The same module must implement `run_rolling_origin_validation()`. Each origin is defined by an immutable UTC cutoff before the held-out event; training rows require `date_start < cutoff`, and held-out realized conditions never enter the scenario inputs. `combine_release_evidence(loco, rolling, uncertainty, baselines, ablations, identifiability, feasibility)` is the only function allowed to set `release_gates.passed`; it requires every report to pass.
 
 ```python
-def combine_release_evidence(*reports: GateReport) -> GateEvaluation:
-    missing = REQUIRED_RELEASE_REPORTS - {report.name for report in reports}
+def combine_release_evidence(gates: ReleaseGates, *reports: GateReport) -> GateEvaluation:
+    required = set(REQUIRED_RELEASE_REPORTS)
+    if not gates.requires_rolling_origin:
+        required.discard("rollingOrigin")
+    if not gates.requires_physical_feasibility:
+        required.discard("physicalFeasibility")
+    if not gates.requires_identifiability:
+        required.discard("identifiability")
+    missing = required - {report.name for report in reports}
     if missing:
         raise ValueError(f"missing release reports: {sorted(missing)}")
     checks = {f"{report.name}.{key}": value for report in reports for key, value in report.checks.items()}
@@ -1325,18 +1389,21 @@ def test_weights_sum_to_one_and_prefer_feature_match() -> None:
 
 ```python
 # calibration/tests/test_spa_predictor.py
-from spa_calibration.spa_predictor import TeamLapSample, predict_field_best
+import pytest
+from spa_calibration.spa_predictor import IncompleteFieldDrawError, TeamLapSample, predict_field_best
 
 
-def test_field_best_uses_one_complete_team_per_draw() -> None:
+def test_field_best_requires_every_profile_and_both_attempts() -> None:
     samples = [
-        TeamLapSample("A", 0, 100.0, (30, 40, 30)),
-        TeamLapSample("B", 0, 99.5, (35, 34.5, 30)),
-        TeamLapSample("A", 1, 98.0, (30, 38, 30)),
-        TeamLapSample("B", 1, 98.5, (32, 36.5, 30)),
+        TeamLapSample("A-DRV", "A", "DRV", 0, 0, 100.0, (30, 40, 30)),
+        TeamLapSample("A-DRV", "A", "DRV", 0, 1, 99.8, (30, 39.8, 30)),
+        TeamLapSample("B-DRV", "B", "DRV", 0, 0, 99.5, (35, 34.5, 30)),
+        TeamLapSample("B-DRV", "B", "DRV", 0, 1, 99.7, (35, 34.7, 30)),
     ]
-    field = predict_field_best(samples)
-    assert [(row.draw, row.team_name, row.lap_time_s) for row in field] == [(0, "B", 99.5), (1, "A", 98.0)]
+    field = predict_field_best(samples, expected_profiles=("A-DRV", "B-DRV"))
+    assert [(row.draw, row.team_name, row.lap_time_s) for row in field] == [(0, "B", 99.5)]
+    with pytest.raises(IncompleteFieldDrawError):
+        predict_field_best(samples[:-1], expected_profiles=("A-DRV", "B-DRV"))
 ```
 
 - [ ] **Step 2: Run and verify RED**
@@ -1379,8 +1446,11 @@ from collections import defaultdict
 
 @dataclass(frozen=True)
 class TeamLapSample:
+    profile_id: str
     team_name: str
+    driver_acronym: str
     draw: int
+    attempt: int
     lap_time_s: float
     sectors_s: tuple[float, float, float]
 
@@ -1393,13 +1463,26 @@ class FieldBestSample:
     sectors_s: tuple[float, float, float]
 
 
-def predict_field_best(samples: list[TeamLapSample]) -> list[FieldBestSample]:
+def predict_field_best(
+    samples: list[TeamLapSample],
+    expected_profiles: tuple[str, ...],
+    attempts_per_profile: int = 2,
+) -> list[FieldBestSample]:
+    expected = {(profile, attempt) for profile in expected_profiles for attempt in range(attempts_per_profile)}
     by_draw: dict[int, list[TeamLapSample]] = defaultdict(list)
     for sample in samples:
         by_draw[sample.draw].append(sample)
     result: list[FieldBestSample] = []
     for draw in sorted(by_draw):
-        winner = min(by_draw[draw], key=lambda row: row.lap_time_s)
+        rows = by_draw[draw]
+        observed = [(row.profile_id, row.attempt) for row in rows]
+        if len(observed) != len(set(observed)) or set(observed) != expected:
+            raise IncompleteFieldDrawError(f"draw {draw} does not contain the complete profile-attempt field")
+        best_by_profile = [
+            min((row for row in rows if row.profile_id == profile), key=lambda row: row.lap_time_s)
+            for profile in expected_profiles
+        ]
+        winner = min(best_by_profile, key=lambda row: row.lap_time_s)
         result.append(FieldBestSample(draw, winner.team_name, winner.lap_time_s, winner.sectors_s))
     return result
 ```
@@ -1501,7 +1584,10 @@ def predict_spa_team(
                 break
             prior_lap_time = solution.lap_time_s
             line = optimized.line
-        samples.append(TeamLapSample(team_name, draw_index, solution.lap_time_s, sector_times(solution.trace)))
+        profile_id = f"{team_name}|{driver_acronym}"
+        for attempt in range(2):
+            attempt_solution = apply_attempt_execution_variation(solution, draw_index=draw_index, attempt=attempt)
+            samples.append(TeamLapSample(profile_id, team_name, driver_acronym, draw_index, attempt, attempt_solution.lap_time_s, sector_times(attempt_solution.trace)))
         traces[draw_index] = solution.trace
     return samples, traces
 
@@ -1815,13 +1901,32 @@ def _checksum(payload: dict[str, object]) -> str:
     return sha256(orjson.dumps(clean, option=orjson.OPT_SORT_KEYS)).hexdigest()
 
 
+def validate_prediction_semantics(
+    artifact: dict[str, object], *, now: datetime, maximum_age_hours: float = 24 * 7,
+) -> None:
+    if artifact.get("schemaVersion") != SCHEMA_VERSION:
+        raise ValueError("unsupported prediction schema")
+    status = artifact.get("status")
+    gates_passed = bool(artifact.get("validation", {}).get("release_gates", {}).get("passed"))
+    if status != "released":
+        if artifact.get("fieldBest") is not None or artifact.get("teams") or artifact.get("corners"):
+            raise ValueError("non-released artifact must suppress prediction estimates")
+        return
+    if not gates_passed or artifact.get("fieldBest") is None:
+        raise ValueError("released artifact requires passing gates and fieldBest")
+    validate_release_reports(artifact.get("validation", {}))
+    validate_release_provenance(artifact.get("provenance", {}))
+    validate_ordered_prediction_intervals(artifact)
+    validate_scenario_and_cutoff_freshness(artifact)
+    generated = datetime.fromisoformat(str(artifact["generatedAt"]))
+    if (now - generated).total_seconds() > maximum_age_hours * 3600:
+        raise ValueError("prediction artifact is stale")
+
+
 def build_prediction_artifact(*, validation, field_summary, team_predictions, corner_predictions, provenance, generated_at: datetime) -> dict[str, object]:
     passed = bool(validation["release_gates"]["passed"])
-    if passed:
-        validate_release_reports(validation)
-        validate_release_provenance(provenance)
     released_teams = [row for row in team_predictions if row.get("supported") is True]
-    artifact: dict[str, object] = {
+    unsigned: dict[str, object] = {
         "schemaVersion": SCHEMA_VERSION,
         "status": "released" if passed else "failed-validation",
         "generatedAt": generated_at.isoformat(),
@@ -1835,27 +1940,18 @@ def build_prediction_artifact(*, validation, field_summary, team_predictions, co
         "validation": validation,
         "provenance": provenance,
     }
-    artifact["checksum"] = _checksum(artifact)
-    return artifact
+    validate_prediction_semantics(unsigned, now=generated_at)
+    artifact = {**unsigned, "checksum": _checksum(unsigned)}
+    return validate_prediction_artifact(artifact, now=generated_at)
 
 
-def validate_prediction_artifact(artifact: dict[str, object]) -> dict[str, object]:
+def validate_prediction_artifact(artifact: dict[str, object], *, now: datetime) -> dict[str, object]:
     if artifact.get("schemaVersion") != SCHEMA_VERSION:
         raise ValueError("unsupported prediction schema")
     actual = _checksum(artifact)
     if artifact.get("checksum") != actual:
         raise ValueError("prediction checksum mismatch")
-    status = artifact.get("status")
-    gates_passed = bool(artifact.get("validation", {}).get("release_gates", {}).get("passed"))
-    if status != "released" and artifact.get("fieldBest") is not None:
-        raise ValueError("non-released artifact must suppress fieldBest")
-    if status == "released":
-        if not gates_passed or artifact.get("fieldBest") is None:
-            raise ValueError("released artifact requires passing gates and fieldBest")
-        validate_release_reports(artifact.get("validation", {}))
-        validate_release_provenance(artifact.get("provenance", {}))
-        validate_ordered_prediction_intervals(artifact)
-        validate_scenario_and_cutoff_freshness(artifact)
+    validate_prediction_semantics(artifact, now=now)
     return artifact
 ```
 

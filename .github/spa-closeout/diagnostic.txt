@@ -1,8 +1,0 @@
-Traceback (most recent call last):
-  File "/tmp/apply_spa_pr1_closeout.py", line 965, in <module>
-    apply_main()
-  File "/tmp/apply_spa_pr1_closeout.py", line 848, in apply_main
-    replace_once(APP, old_norm, new_norm)
-  File "/tmp/apply_spa_pr1_closeout.py", line 23, in replace_once
-    raise RuntimeError(f'{path}: expected exactly one match, found {count}: {old[:120]!r}')
-RuntimeError: circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-app-integration.md: expected exactly one match, found 0: 'trace: reference.trace.map((sample) => ({\n  ...sample,\n  speedKph: sample.speedKph ?? sample.speed,\n  throttlePct: sampl'
