@@ -286,3 +286,25 @@ mutation: append-only
 **Next action:** refresh PR #1 and all review threads; if unchanged, build and publish one exact-parent correction commit, read it back, and require exact-head CI before any thread action.
 
 **Lessons review:** no-new-lesson; `L-009` through `L-012` cover the observed integration, truncation, workspace-identity, and branch-cleanup failures.
+
+## A-015 — 2026-07-16T16:35:00Z — Publish correction and complete final thread actions
+
+**Evidence status:** correction remotely observed and CI-confirmed; review actions remotely observed; evidence synchronization locally verified but unpublished.
+
+**Starting state:** PR #1 was open at `76b8226e0e4365bf757300972174e5fe28319f1c` with 22 unresolved final review threads. The bounded twelve-file correction had been locally verified and preserved in a deterministic publication handoff.
+
+**Work performed:** a low-discretion executor built candidate `273728cc929c42c7ca6edbe0cca93de4213530ec`, fast-forwarded the existing PR branch, restored the worker-evidence archive, verified exact-head GitHub Actions, then applied the authenticated reaction, inline-reply, and resolution actions for `FINAL-01` through `FINAL-22`. The complete review-thread readback was inspected after the sweep. Exactly the three authorized evidence files were then updated locally for the evidence-sync unit.
+
+**Files changed:** correction publication changed the twelve bounded planning/control files already recorded by `A-014`. The current unpublished evidence-sync unit changes only `project/STATUS.md`, `project/ACTIVITY.md`, and `reviews/2026-07-15-plan-reconciliation.md`.
+
+**Verification:** correction head `273728cc929c42c7ca6edbe0cca93de4213530ec` is remotely observed; `Verify` run `29504511897`, job `87641667040`, completed successfully with the canonical verification step green. Review readback shows 22/22 final replies and resolutions and zero unresolved threads. For the evidence-sync working tree, project-control tests pass 9/9, direct project-control validation passes, `git diff --check` passes, and `bash scripts/verify.sh` passes.
+
+**Publication / remote actions:** the correction is pushed and CI-confirmed. All 22 final reactions, replies, and resolutions are complete. The evidence-sync update is not yet committed or pushed. No final-review request has been posted for the current correction/evidence state, and PR #1 is not merged.
+
+**Result:** the technical reconciliation and thread-action sweep are complete. The remaining bounded work is evidence-sync publication, exact-head CI, one final independent review, and conditional squash merge.
+
+**Next action:** publish the exact three-file evidence-sync unit to the existing PR branch, obtain exact-head `Verify` success, then post one final `@codex review` request.
+
+**Lessons review:** no-new-lesson; the transport friction is already covered by the durable-handoff and exact-readback guardrails.
+
+lessons_reviewed: no-new-lesson

@@ -1,57 +1,57 @@
 ---
 schema: race-lab-project-status/v1
 initiative: spa-2026-calibration
-phase: pr1-final-22-reconstruction
+phase: pr1-final-review-ready
 repository: loganrooks/race-lab
 branch: chore/establish-race-lab-structure
 pull_request: 1
-last_observed_remote_head: 76b8226e0e4365bf757300972174e5fe28319f1c
-last_observed_at: 2026-07-16T12:55:25Z
-evidence_source: github-pr-info-thread-inventory-branch-reconciliation-and-local-reconstruction
-publication_state: local-correction-verified-unpublished
-verification_state: locally-verified-complete-suite
-active_tasks: [PR-01, PR-02, PR-03, PR-04]
-next_action: Refresh PR #1 and publish one atomic commit parented by 76b8226e0e4365bf757300972174e5fe28319f1c only if the remote head and 22-thread inventory are unchanged.
+last_observed_remote_head: 273728cc929c42c7ca6edbe0cca93de4213530ec
+last_observed_at: 2026-07-16T16:35:00Z
+evidence_source: github-pr-info-exact-head-ci-and-complete-thread-readback
+publication_state: pushed-correction-ci-confirmed-review-actions-complete
+verification_state: evidence-sync-locally-verified-unpublished
+active_tasks: [PR-03, PR-04]
+next_action: Publish the three-file evidence synchronization to PR #1, obtain exact-head Verify success, request exactly one final Codex review, and merge by squash only if the fresh review is clean.
 original_comments_total: 46
 original_comments_rated: 5
 original_comments_replied: 46
 original_comments_resolved: 46
 fresh_comments_total: 22
-fresh_comments_rated: 0
-fresh_comments_replied: 0
-fresh_comments_resolved: 0
+fresh_comments_rated: 22
+fresh_comments_replied: 22
+fresh_comments_resolved: 22
 ---
 
 # Current Status
 
 ## Objective
 
-Integrate the bounded `FINAL-01` through `FINAL-22` reconciliation against the exact PR #1 head, publish it as one verified planning-only correction, complete the 22-row review-action sweep, obtain exactly one final clean review, and merge without implementing production calibration functionality.
+Complete PR #1 closeout without reopening approved architecture or implementing production calibration functionality: synchronize durable evidence for the published 22-finding correction, obtain one final independent review of the exact evidence-sync head, and merge only when every release and review gate is clean.
 
 ## Directly observed remote state
 
-- **Remotely observed:** PR #1 is open, not merged, and mergeable on branch `chore/establish-race-lab-structure` at exact head `76b8226e0e4365bf757300972174e5fe28319f1c` as of `2026-07-16T12:55:25Z`.
-- **CI-confirmed:** the pre-reconciliation head `76b8226e0e4365bf757300972174e5fe28319f1c` passed GitHub Actions `Verify` run `29458395034`, job `87506643191`. This evidence does not cover the unpublished local correction.
-- **Remotely observed:** 46 prior review threads are resolved and carry inline replies. Their historic reaction count remains 5/46 because no new reaction sweep has been performed.
-- **Remotely observed:** the final reconciliation inventory contains exactly 22 unresolved threads. None has yet received a reaction, inline reply, or resolution for the unpublished correction.
-- **Remotely observed:** worker commits `e205f171ab95700a4f26708d46aa3431ed0b175d`, `35197927fe49058c0cd5383035e7e64e8f741351`, and `02eaa3a69bf3d8197703221f49dcf16b575a0399` are readable. The data worker diff deletes 2,132 lines and is blocked from direct integration.
+- **Remotely observed:** PR #1 is open, unmerged, and mergeable on `chore/establish-race-lab-structure` at exact head `273728cc929c42c7ca6edbe0cca93de4213530ec`.
+- **CI-confirmed:** GitHub Actions `Verify` run `29504511897`, job `87641667040`, completed successfully for that exact correction head; its canonical verification step succeeded.
+- **Remotely observed:** all `FINAL-01` through `FINAL-22` threads contain the bounded disposition replies and are resolved. The complete readback contains zero unresolved review threads and no new finding.
+- **Remotely observed:** the worker-evidence archive is restored to `b105df73de22059161959673d110e31cb2177daa` and is not a publication dependency for this evidence-only update.
 
-## Local integration state
+## Local evidence-sync state
 
-- **Locally verified, targeted only:** the new historical-marker regression failed for the expected reason before the validator change, then passed after restricting lesson review to the newest activity entry; the full project-control test file passed 9/9 at that checkpoint.
-- **Local work in progress:** the 22-finding unit was freshly reconstructed against the complete base after the earlier volatile workspace was lost. The data plan remains a bounded edit of the complete base; model and browser contracts were selectively rebuilt from preserved worker evidence and independently checked.
-- **Not yet published to PR #1:** branch cleanup and an evidence archive were performed remotely, but the reconstructed correction has not moved the PR branch.
-- **Locally verified:** the current-entry lesson regression produced the expected RED failure and then passed; the complete project-control suite passed 9/9; project-control validation, diff integrity, canonical verification, exact-file/invariant checks, full plan-size checks, and 144 fenced Python/JavaScript/Bash/JSON syntax checks all passed. Ruff and ShellCheck were unavailable and explicitly skipped by the canonical verifier.
+- **Locally verified:** exactly three authorized evidence files are changed: this status file, `ACTIVITY.md`, and `../reviews/2026-07-15-plan-reconciliation.md`.
+- **Locally verified:** project-control tests pass 9/9; direct project-control validation, `git diff --check`, and canonical `bash scripts/verify.sh` pass.
+- **Not yet committed or pushed:** the three-file evidence-sync update has no remote commit, exact-head CI run, or final-review request yet.
+- Incorrect unreferenced Git blobs created during an abandoned full-file transfer are unreachable and do not affect any repository ref, tree, commit, branch, PR, or review state.
 
 ## Active work
 
-The active tasks are `PR-01` through `PR-04` in `../plans/2026-07-15-pr1-closeout-plan.md`: atomic correction publication, 22-row action sweep, evidence synchronization, and final review/merge.
+- `PR-03`: publish and verify the three-file evidence synchronization.
+- `PR-04`: request exactly one final Codex review, evaluate the complete response, and merge by squash only on a clean exact head.
 
 ## Blockers and risks
 
-- The 22 current threads must remain open until the correction head is remotely CI-confirmed.
-- The exact PR head must be refreshed immediately before publication; any movement from `76b8226e0e4365bf757300972174e5fe28319f1c` blocks publication until reconciled.
-- Software verification cannot validate the scientific prediction model.
+- Any PR-head movement before evidence publication requires a fresh reconciliation.
+- Any new unresolved or technically credible final-review finding blocks merge until dispositioned and verified.
+- Software and document verification do not validate a scientific prediction model.
 
 ## Release integrity
 
@@ -62,4 +62,4 @@ The active tasks are `PR-01` through `PR-04` in `../plans/2026-07-15-pr1-closeou
 
 ## Next exact action
 
-Run the complete verification stack on the reconstructed twelve-file unit. Refresh the exact remote PR head and thread inventory; if the head remains `76b8226e0e4365bf757300972174e5fe28319f1c`, create one atomic correction commit parented by that SHA and advance the PR branch once.
+Create one evidence-sync commit parented by `273728cc929c42c7ca6edbe0cca93de4213530ec` containing only the three authorized evidence files. Advance the existing PR branch with a non-forced fast-forward, read back the exact head, and require successful exact-head `Verify` before posting the single final `@codex review` request.
