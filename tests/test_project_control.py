@@ -192,6 +192,24 @@ initiative: spa-2026-calibration
             activity_text="lessons_reviewed: no-new-lesson",
         )
 
+    def test_review_change_cannot_reuse_historical_no_new_lesson_marker(self) -> None:
+        changed = {
+            "circuits/spa-francorchamps/seasons/2026/reviews/example.md",
+            "circuits/spa-francorchamps/seasons/2026/project/STATUS.md",
+            "circuits/spa-francorchamps/seasons/2026/project/ACTIVITY.md",
+        }
+        previous = """# Activity
+
+## A-001 — 2026-07-15T20:00:00Z — Historical review
+**Lessons review:** no-new-lesson.
+"""
+        current = previous + """
+## A-002 — 2026-07-15T21:00:00Z — Current review
+**Lessons review:** pending.
+"""
+        with self.assertRaisesRegex(validator.ValidationError, "LESSONS.md"):
+            validator.validate_required_record_updates(changed, activity_text=current)
+
 
 if __name__ == "__main__":
     unittest.main()

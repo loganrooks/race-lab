@@ -35,6 +35,10 @@ Before substantive work:
 - Keep planning, implementation, validation, release, and historical record distinct.
 - When an interface or schema changes, search specifications, plans, reviews, implementation, tests, generators, validators, browser integration, and documentation for every producer and consumer.
 - Track review actions separately: finding evaluated, artifact changed, reaction applied, inline reply posted, thread resolved, and fresh review requested.
+- Executable code or control changes require an executable workspace; connector-only replacement is not integration evidence.
+- Before declaring a workspace present or lost, verify its exact path, `.git`, branch/HEAD, status, and expected file inventory.
+- Treat remote worker full-file rewrites as untrusted until complete content, byte/line counts, and diff statistics are compared with the exact base.
+- Temporary branches require an explicit cleanup gate; retain only the active PR branch and a deliberately named evidence archive when necessary.
 - If interrupted, record the exact partial count. Never leave a procedural sweep implicit.
 
 ## End-of-session procedure
@@ -108,6 +112,7 @@ When records disagree:
 - required activity-entry sections and monotonic timestamps;
 - append-only activity history when a merge base contains prior entries;
 - diff-coupled record updates;
+- review reconciliations record lesson review in the newest appended activity entry rather than reusing a historical marker;
 - placeholder and malformed-record failures.
 
 `scripts/verify.sh` invokes this validator. `.github/workflows/verify.yml` invokes the canonical verifier on pull requests and pushes. Branch protection should require that workflow before merge when repository settings permit.

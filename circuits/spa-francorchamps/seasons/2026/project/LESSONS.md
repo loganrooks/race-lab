@@ -116,3 +116,59 @@ initiative: spa-2026-calibration
 **Enforcement:** `PR-01` and `PR-02` require a same-head thread refresh; `STATUS.md` counters must match the refreshed inventory.
 
 **Evidence of effectiveness:** this session stopped the action sweep, added FOLLOWUP-01 through FOLLOWUP-11, and corrected the additional batch before resolution.
+
+## L-009 — Active — Connector-only mutation is not executable integration
+
+**Friction:** Remote text writes can look complete without an extracted workspace, RED/GREEN evidence, executable validation, or a coherent multi-file tree.
+
+**Systemic cause:** Repository mutation capability was conflated with an executable development environment.
+
+**Consequence:** Plausible remote replacements could have bypassed integration and truncation checks.
+
+**Guardrail:** Code and controls changes require an executable local workspace plus connector-backed remote state; stop before publication when either is absent.
+
+**Enforcement:** maintenance rules, capability gate, canonical verification, and exact blob/tree readback.
+
+**Evidence of effectiveness:** this reconstruction performed the controls RED/GREEN cycle and local verification before preparing a new publication candidate.
+
+## L-010 — Active — Full-file worker rewrites require independent truncation checks
+
+**Friction:** The data worker reported success while its file deleted 2,132 lines from the complete plan.
+
+**Systemic cause:** Worker self-report was treated as potential evidence without comparing the exact base, complete result, and diff statistics.
+
+**Consequence:** Direct integration would have destroyed most of the authoritative plan.
+
+**Guardrail:** Compare byte count, line count, diff statistics, complete content, and affected interfaces for every worker full-file rewrite; a dramatic unexplained collapse blocks integration.
+
+**Enforcement:** maintenance rules, closeout publication gates, and explicit rejection of data commit `e205f171ab95700a4f26708d46aa3431ed0b175d` as a file source.
+
+**Evidence of effectiveness:** the complete 91 KB data plan was patched in place and remains larger than the base.
+
+## L-011 — Active — Verify workspace identity before declaring work lost
+
+**Friction:** A shallow filesystem check led to an incorrect claim that the prior workspace had disappeared.
+
+**Systemic cause:** A familiar parent path was inspected without verifying the exact repository root, `.git`, branch, commit, and file inventory.
+
+**Consequence:** An unnecessary reconstruction path was started and the user had to challenge the state report.
+
+**Guardrail:** Before declaring a workspace present or lost, resolve the exact path, require `.git`, read `git status`, `HEAD`, branch/worktree identity, and enumerate the expected files.
+
+**Enforcement:** start-of-session recovery procedure and activity evidence requirements.
+
+**Evidence of effectiveness:** the deeper preserved workspace was subsequently found and used to recover authoritative status, activity, and ledger records.
+
+## L-012 — Active — Temporary branches require immediate reconciliation
+
+**Friction:** Repeated automation and worker attempts accumulated thirteen branches and obscured which branch owned PR #1.
+
+**Systemic cause:** Temporary refs were created as transport and execution mechanisms without a cleanup gate.
+
+**Consequence:** Publication state became difficult to inspect and user trust declined.
+
+**Guardrail:** No new temporary branch when an existing controlled ref can serve; archive evidence before deletion; after a bounded task retain only `main`, the active PR branch, and at most one named evidence archive.
+
+**Enforcement:** branch inventory and cleanup before further publication.
+
+**Evidence of effectiveness:** eleven stale automation/worker refs were removed after the three worker tips were preserved in archive commit `b105df73de22059161959673d110e31cb2177daa`.

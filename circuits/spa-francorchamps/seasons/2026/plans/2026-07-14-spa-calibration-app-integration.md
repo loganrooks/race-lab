@@ -24,7 +24,8 @@
 ## Mandatory Review Resolutions
 
 - The browser, build generator, Python model, and CLI use the same release predicate and fixture corpus. A checksum is necessary but never sufficient.
-- The build generator calls `validateCalibrationArtifact()` after checksum verification and emits a frozen pending artifact on any schema, gate, interval, provenance, scenario, cutoff, or freshness failure.
+- The build generator calls the one shared `validateCalibrationArtifact()` after checksum verification and emits a recursively frozen pending artifact on any schema, gate, report, interval, trace, timing, provenance, scenario, cutoff, or freshness failure.
+- Released field-best intervals contain five finite ordered values; supported team intervals retain three finite ordered values. Released prediction sources require coherent nonempty trace and timing arrays from the same sampled attempt.
 - Historical OpenF1 inputs are normalized at the adapter boundary from legacy `speed/throttle/brake` names to `speedKph/throttlePct/brakePct`; raw objects never enter `TraceSource`.
 - The UI displays the estimand and `spa-2026-dry-qualifying-reference/v1` scenario, including the best-of-two-attempts meaning and condition distributions.
 - Rolling-origin, uncertainty calibration, baseline/ablation, identifiability, physical feasibility, and eligibility summaries are required before a released state can render.
@@ -70,6 +71,9 @@ type TraceSample = {
   upper80SpeedKph?: number;
 };
 
+type LapTimeInterval80 = { lower80: number; median: number; upper80: number };
+type LapTimeInterval95 = LapTimeInterval80 & { lower95: number; upper95: number };
+
 type TraceSource = {
   id: string;
   label: string;
@@ -78,7 +82,7 @@ type TraceSource = {
   trace: TraceSample[];
   timingTable: { progress: number; time: number }[];
   lapTimeSeconds: number | null;
-  interval?: { lower80: number; median: number; upper80: number };
+  interval?: LapTimeInterval80 | LapTimeInterval95;
   disclosure: string;
   provenance: Record<string, unknown>;
 };
@@ -108,6 +112,11 @@ import assert from 'node:assert/strict';
 import { pendingCalibrationArtifact, validateCalibrationArtifact } from '../js/calibration-schema.js';
 
 const NOW = new Date('2026-07-15T00:00:00Z');
+const VALID_TRACE = [
+  { progress: 0, elapsedSeconds: 0, speedKph: 280, throttlePct: 100, brakePct: 0, gear: 8, batteryKj: 4000 },
+  { progress: 1, elapsedSeconds: 101, speedKph: 280, throttlePct: 100, brakePct: 0, gear: 8, batteryKj: 3400 },
+];
+const VALID_TIMING_TABLE = [{ progress: 0, time: 0 }, { progress: 1, time: 1 }];
 const REPORT_NAMES = ['loco', 'rollingOrigin', 'uncertaintyCalibration', 'baselinesAblations', 'identifiability', 'physicalFeasibility', 'eligibility'];
 
 function releasedFixture(overrides = {}) {
@@ -118,7 +127,7 @@ function releasedFixture(overrides = {}) {
     modelVersion: 'spa-corner-transfer/0.1.0',
     generatedAt: '2026-07-14T00:00:00Z',
     sourceCutoff: '2026-07-13T23:59:59Z',
-    fieldBest: { lapTimeSeconds: { lower95: 99, lower80: 100, median: 101, upper80: 102, upper95: 103 } },
+    fieldBest: { lapTimeSeconds: { lower95: 99, lower80: 100, median: 101, upper80: 102, upper95: 103 }, trace: VALID_TRACE, timingTable: VALID_TIMING_TABLE },
     teams: [], historicalReferences: [], analogueTraces: [], corners: [],
     validation: { release_gates: { passed: true, checks: { all: true } }, reports },
     provenance: {
@@ -126,7 +135,7 @@ function releasedFixture(overrides = {}) {
       circuitYearEligibilityChecksum: '3'.repeat(64), scenarioChecksum: '4'.repeat(64),
       randomSeed: 7, regulationIdentifiers: ['2026'], hyperparameters: {},
       trainingCircuits: ['silverstone'], heldOutCircuits: ['spa'],
-      validationReportChecksums: {}, codeCommit: 'a'.repeat(40),
+      validationReportChecksums: Object.fromEntries(REPORT_NAMES.map((name) => [name, 'a'.repeat(64)])), codeCommit: 'a'.repeat(40),
       scenario: { id: 'spa-2026-dry-qualifying-reference/v1', attempts: 2 }
     },
     checksum: 'a'.repeat(64),
@@ -137,12 +146,23 @@ function releasedFixture(overrides = {}) {
 const released = releasedFixture();
 const validate = (value) => validateCalibrationArtifact(value, { now: NOW });
 
-test('released artifact requires ordered field-best interval', () => {
+test('released artifact requires finite ordered five-point field-best interval', () => {
   assert.equal(validate(released).status, 'released');
-  assert.throws(() => validate({
-    ...released,
-    fieldBest: { lapTimeSeconds: { lower80: 102, median: 101, upper80: 100 } }
-  }), /interval/i);
+  const invalid = [
+    { lower80: 100, median: 101, upper80: 102, upper95: 103 },
+    { lower95: 99, lower80: '100', median: 101, upper80: 102, upper95: 103 },
+    { lower95: 99, lower80: 100, median: Number.NaN, upper80: 102, upper95: 103 },
+    { lower95: 101, lower80: 100, median: 101, upper80: 102, upper95: 103 },
+    { lower95: 99, lower80: 100, median: 101, upper80: 104, upper95: 103 },
+  ];
+  for (const lapTimeSeconds of invalid) {
+    assert.throws(() => validate(releasedFixture({ fieldBest: { ...released.fieldBest, lapTimeSeconds } })), /interval/i);
+  }
+});
+
+test('released artifact requires playable field-best trace and timing arrays', () => {
+  assert.throws(() => validate(releasedFixture({ fieldBest: { ...released.fieldBest, trace: [] } })), /trace/i);
+  assert.throws(() => validate(releasedFixture({ fieldBest: { ...released.fieldBest, timingTable: [] } })), /timing/i);
 });
 
 test('non-released artifacts cannot expose field best', () => {
@@ -168,6 +188,65 @@ const SCHEMA = 'spa-calibration-prediction/v1';
 const STATUS = new Set(['pending', 'failed-validation', 'released']);
 const REQUIRED_REPORTS = ['loco', 'rollingOrigin', 'uncertaintyCalibration', 'baselinesAblations', 'identifiability', 'physicalFeasibility', 'eligibility'];
 const REQUIRED_PROVENANCE = ['trainingManifestChecksum', 'sourceEligibilityChecksum', 'circuitYearEligibilityChecksum', 'scenarioChecksum', 'randomSeed', 'regulationIdentifiers', 'hyperparameters', 'trainingCircuits', 'heldOutCircuits', 'validationReportChecksums', 'codeCommit'];
+
+const FIELD_BEST_INTERVAL_KEYS = ['lower95', 'lower80', 'median', 'upper80', 'upper95'];
+const TEAM_INTERVAL_KEYS = ['lower80', 'median', 'upper80'];
+
+function deepFreeze(value) {
+  if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
+  for (const child of Object.values(value)) deepFreeze(child);
+  return Object.freeze(value);
+}
+
+function finiteNumber(value, label) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) throw new TypeError(`${label} must be finite`);
+  return value;
+}
+
+function validateInterval(interval, keys, label) {
+  if (!interval || typeof interval !== 'object') throw new TypeError(`${label} interval is missing`);
+  const values = keys.map((key) => finiteNumber(interval[key], `${label}.${key}`));
+  for (let index = 1; index < values.length; index += 1) {
+    if (values[index - 1] > values[index]) throw new TypeError(`${label} interval is not ordered`);
+  }
+}
+
+export function validateTraceRows(trace, label = 'trace') {
+  if (!Array.isArray(trace) || trace.length < 2) throw new TypeError(`${label} requires at least two rows`);
+  let previousProgress = -Infinity;
+  let previousElapsed = -Infinity;
+  for (const [index, row] of trace.entries()) {
+    for (const key of ['progress', 'elapsedSeconds', 'speedKph', 'throttlePct', 'brakePct', 'gear']) finiteNumber(row?.[key], `${label}[${index}].${key}`);
+    if (row.progress < 0 || row.progress > 1 || row.progress <= previousProgress) throw new TypeError(`${label} progress is invalid`);
+    if (row.elapsedSeconds < 0 || row.elapsedSeconds < previousElapsed) throw new TypeError(`${label} elapsed time is invalid`);
+    previousProgress = row.progress; previousElapsed = row.elapsedSeconds;
+  }
+  if (trace[0].progress !== 0 || trace[0].elapsedSeconds !== 0 || trace.at(-1).progress !== 1) throw new TypeError(`${label} must span 0..1`);
+  return trace;
+}
+
+export function validateTimingTable(rows, label = 'timingTable') {
+  if (!Array.isArray(rows) || rows.length < 2) throw new TypeError(`${label} requires at least two rows`);
+  rows.forEach((row, index) => { finiteNumber(row?.progress, `${label}[${index}].progress`); finiteNumber(row?.time, `${label}[${index}].time`); });
+  for (let index = 1; index < rows.length; index += 1) {
+    if (rows[index].progress <= rows[index - 1].progress || rows[index].time < rows[index - 1].time) throw new TypeError(`${label} must be monotonic`);
+  }
+  if (rows[0].progress !== 0 || rows[0].time !== 0 || rows.at(-1).progress !== 1 || rows.at(-1).time !== 1) throw new TypeError(`${label} must span 0..1`);
+  return rows;
+}
+
+function validatePredictionSource(source, label, intervalKeys) {
+  if (!source) throw new TypeError(`Released artifact requires ${label}`);
+  validateInterval(source.lapTimeSeconds, intervalKeys, `${label}.lapTimeSeconds`);
+  validateTraceRows(source.trace, `${label}.trace`);
+  validateTimingTable(source.timingTable, `${label}.timingTable`);
+  if (source.trace.length !== source.timingTable.length) throw new TypeError(`${label} trace/timing row count mismatch`);
+  source.trace.forEach((row, index) => {
+    if (row.progress !== source.timingTable[index].progress) throw new TypeError(`${label} trace/timing progress mismatch`);
+    const fraction = row.elapsedSeconds / source.trace.at(-1).elapsedSeconds;
+    if (Math.abs(fraction - source.timingTable[index].time) > 1e-9) throw new TypeError(`${label} timing does not match trace elapsed fraction`);
+  });
+}
 
 function validateRequiredReleaseReports(validation) {
   for (const name of REQUIRED_REPORTS) {
@@ -196,7 +275,7 @@ export function canonicalJson(value) {
 }
 
 export function pendingCalibrationArtifact(reason = 'missing') {
-  return Object.freeze({
+  return deepFreeze({
     schemaVersion: SCHEMA,
     status: 'pending',
     reason,
@@ -233,15 +312,15 @@ export function validateCalibrationArtifact(value, { now = new Date(), maximumAg
     const sourceCutoff = Date.parse(value.sourceCutoff);
     if (!Number.isFinite(generated) || !Number.isFinite(sourceCutoff)) throw new TypeError('Released artifact requires valid timestamps');
     if (now.getTime() - generated > maximumAgeHours * 3600_000) throw new TypeError('Released artifact is stale');
-    const interval = value.fieldBest?.lapTimeSeconds;
-    if (!interval || !(interval.lower80 <= interval.median && interval.median <= interval.upper80)) {
-      throw new TypeError('Calibration lap-time interval is not ordered');
+    validatePredictionSource(value.fieldBest, 'fieldBest', FIELD_BEST_INTERVAL_KEYS);
+    for (const [index, team] of value.teams.entries()) {
+      validatePredictionSource(team, `teams[${index}]`, TEAM_INTERVAL_KEYS);
     }
   }
   for (const key of ['teams', 'historicalReferences', 'analogueTraces', 'corners']) {
     if (!Array.isArray(value[key])) throw new TypeError(`${key} must be an array`);
   }
-  return Object.freeze(value);
+  return deepFreeze(value);
 }
 ```
 
@@ -249,7 +328,7 @@ export function validateCalibrationArtifact(value, { now = new Date(), maximumAg
 // scripts-build-calibration-data.mjs
 import { readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { validateCalibrationArtifact } from './js/calibration-schema.js';
+import { pendingCalibrationArtifact, validateCalibrationArtifact } from './js/calibration-schema.js';
 
 const input = new URL('./calibration/artifacts/predictions/spa-2026-prediction-v1.json', import.meta.url);
 const output = new URL('./js/calibration-data.js', import.meta.url);
@@ -260,15 +339,6 @@ function canonicalJson(value) {
     return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(',')}}`;
   }
   return JSON.stringify(value);
-}
-
-function pending(reason) {
-  return {
-    schemaVersion: 'spa-calibration-prediction/v1', status: 'pending', reason,
-    modelVersion: null, generatedAt: null, sourceCutoff: null, fieldBest: null,
-    teams: [], historicalReferences: [], analogueTraces: [], corners: [],
-    validation: null, provenance: {}, checksum: null
-  };
 }
 
 const generatedAt = new Date();
@@ -282,11 +352,11 @@ try {
   }
   artifact = validateCalibrationArtifact(artifact, { now: generatedAt, maximumAgeHours: 24 * 7 });
 } catch (error) {
-  artifact = pending(error.code === 'ENOENT' ? 'missing' : 'invalid-or-unverified');
+  artifact = pendingCalibrationArtifact(error.code === 'ENOENT' ? 'missing' : 'invalid-or-unverified');
 }
 const sourceHash = createHash('sha256').update(canonicalJson(artifact)).digest('hex');
 const moduleText = `// Generated by scripts-build-calibration-data.mjs; source ${sourceHash}
-export const CALIBRATION_ARTIFACT = Object.freeze(${JSON.stringify(artifact)});
+export const CALIBRATION_ARTIFACT = ${JSON.stringify(artifact)};
 `;
 await writeFile(output, moduleText, 'utf8');
 console.log(`wrote js/calibration-data.js status=${artifact.status}`);
@@ -382,8 +452,16 @@ Expected: missing module.
 
 ```javascript
 // js/trace-sources.js
+import { validateTimingTable, validateTraceRows } from './calibration-schema.js';
+
 export function buildTraceSources({ simulation, calibration, references }) {
-  const sources = [{
+  const sources = [];
+  const appendPlayableSource = (source) => {
+    validateTraceRows(source.trace, `${source.id}.trace`);
+    validateTimingTable(source.timingTable, `${source.id}.timingTable`);
+    sources.push(source);
+  };
+  appendPlayableSource({
     id: 'educational-model',
     label: 'Uncalibrated educational simulation',
     kind: 'educational-model',
@@ -394,9 +472,9 @@ export function buildTraceSources({ simulation, calibration, references }) {
     interval: null,
     disclosure: 'Coupled vehicle model; not the calibrated 2026 Spa prediction.',
     provenance: { model: simulation.modelVersion || 'vehicle-model' }
-  }];
+  });
   if (calibration.status === 'released') {
-    sources.push({
+    appendPlayableSource({
       id: 'field-best-2026',
       label: '2026 predicted field best',
       kind: 'prediction',
@@ -409,7 +487,7 @@ export function buildTraceSources({ simulation, calibration, references }) {
       provenance: calibration.provenance
     });
     for (const team of calibration.teams) {
-      sources.push({
+      appendPlayableSource({
         id: `team-${team.slug}`,
         label: `${team.teamName} 2026 prediction`,
         kind: 'prediction',
@@ -424,7 +502,7 @@ export function buildTraceSources({ simulation, calibration, references }) {
     }
   }
   for (const reference of references) {
-    sources.push({
+    appendPlayableSource({
       id: reference.id,
       label: `${reference.driver.name} · ${reference.year} ${reference.sessionName}`,
       kind: 'historical',
@@ -446,7 +524,7 @@ export function buildTraceSources({ simulation, calibration, references }) {
     });
   }
   for (const analogue of calibration.analogueTraces || []) {
-    sources.push({ ...analogue, kind: 'analogue', spatialRoute: 'reference-racing-line' });
+    appendPlayableSource({ ...analogue, kind: 'analogue', spatialRoute: 'reference-racing-line' });
   }
   return sources;
 }
@@ -485,32 +563,34 @@ Modify `MapController` to receive an explicit route and import the shared sample
 ```javascript
 import { sampleTrace } from './trace-sources.js';
 
-setTraceSource(source) {
-  if (!source?.trace?.length || !source?.timingTable?.length) throw new TypeError('Trace source requires trace and timingTable');
-  if (this.playbackState === 'playing') this.pause();
-  this.traceSource = source;
-  this.playbackRoute = source.spatialRoute === 'reference-racing-line' ? 'reference' : 'racing';
-  this.playbackSourceId = source.id;
-  this.timingTable = source.timingTable;
-  this.duration = 20500;
-  this.car.dataset.source = source.id;
-  this.setTime(0);
-}
-
-setTime(time) {
-  const boundedTime = clamp(time, 0, 1);
-  this.playbackTime = boundedTime;
-  const progress = progressAtTime(this.timingTable, boundedTime);
-  const point = this.pointAt(progress, this.playbackRoute);
-  const telemetry = sampleTrace(this.traceSource, progress);
-  this.car.setAttribute('transform', `translate(${round(point.x)} ${round(point.y)}) rotate(${round(point.angle)})`);
-  this.car.classList.toggle('positioned', boundedTime > 0);
-  if (this.progressBar) this.progressBar.style.width = `${progress * 100}%`;
-  if (this.scrubber && Number(this.scrubber.value) !== Math.round(progress * 1000)) {
-    this.scrubber.value = String(Math.round(progress * 1000));
+export class MapController {
+  setTraceSource(source) {
+    if (!source?.trace?.length || !source?.timingTable?.length) throw new TypeError('Trace source requires trace and timingTable');
+    if (this.playbackState === 'playing') this.pause();
+    this.traceSource = source;
+    this.playbackRoute = source.spatialRoute === 'reference-racing-line' ? 'reference' : 'racing';
+    this.playbackSourceId = source.id;
+    this.timingTable = source.timingTable;
+    this.duration = 20500;
+    this.car.dataset.source = source.id;
+    this.setTime(0);
   }
-  this.onProgress?.({ time: boundedTime, progress, telemetry, point, sourceId: this.playbackSourceId });
-  if (this.followCar) this.followPoint(point);
+
+  setTime(time) {
+    const boundedTime = clamp(time, 0, 1);
+    this.playbackTime = boundedTime;
+    const progress = progressAtTime(this.timingTable, boundedTime);
+    const point = this.pointAt(progress, this.playbackRoute);
+    const telemetry = sampleTrace(this.traceSource, progress);
+    this.car.setAttribute('transform', `translate(${round(point.x)} ${round(point.y)}) rotate(${round(point.angle)})`);
+    this.car.classList.toggle('positioned', boundedTime > 0);
+    if (this.progressBar) this.progressBar.style.width = `${progress * 100}%`;
+    if (this.scrubber && Number(this.scrubber.value) !== Math.round(progress * 1000)) {
+      this.scrubber.value = String(Math.round(progress * 1000));
+    }
+    this.onProgress?.({ time: boundedTime, progress, telemetry, point, sourceId: this.playbackSourceId });
+    if (this.followCar) this.followPoint(point);
+  }
 }
 ```
 
@@ -816,6 +896,18 @@ git commit -m "feat(app): visualize lap traces and uncertainty"
 ```
 
 ---
+
+
+```javascript
+// tests/helpers/load-released-calibration-fixture.js
+export async function loadReleasedCalibrationFixture(page, fixture = releasedCalibrationFixture()) {
+  await page.route('**/calibration/artifacts/predictions/spa-2026-prediction-v1.json', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fixture) });
+  });
+  await page.goto('/');
+  await page.waitForFunction(() => window.__RACE_LAB__?.calibration?.status === 'released');
+}
+```
 
 ### Task 5: Add corner prediction evidence drawer
 

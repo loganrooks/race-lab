@@ -152,7 +152,7 @@ class AlignedLap:
 
 ```python
 # calibration/tests/test_schemas.py
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, time
 import pytest
 from pydantic import ValidationError
 from spa_calibration.schemas import CorpusManifest, LapKey, LapQuality, LapRecord
@@ -528,6 +528,7 @@ def sha256_bytes(payload: bytes) -> str:
 ```python
 # calibration/src/spa_calibration/cache.py
 from dataclasses import dataclass
+from io import BytesIO
 from pathlib import Path
 import orjson
 from .hashing import canonical_json_bytes, sha256_bytes
@@ -792,7 +793,16 @@ git commit -m "feat(calibration-data): add deterministic OpenF1 cache"
 ```python
 # calibration/tests/test_quality.py
 import pandas as pd
-from spa_calibration.quality import LapContext, classify_lap
+from spa_calibration.quality import LapContext, RawCoverage, classify_lap
+
+
+def complete_raw_coverage(*, maximum_gap_s: float = 0.27, maximum_progress_reversal: float = 0.0) -> RawCoverage:
+    return RawCoverage(
+        progress_start=0.0, progress_end=1.0, coverage_ratio=1.0,
+        channel_coverage={"speed_kph": 1.0},
+        maximum_gap_s=maximum_gap_s,
+        maximum_progress_reversal=maximum_progress_reversal,
+    )
 
 
 def clean_trace() -> pd.DataFrame:
@@ -807,7 +817,7 @@ def test_clean_dry_complete_lap_is_accepted() -> None:
     quality = classify_lap(
         lap_time_s=100.0,
         trace=clean_trace(),
-        context=LapContext(rainfall=False, race_control_flags=(), is_pit_out=False, aborted=False),
+        context=LapContext(rainfall=False, race_control_flags=(), is_pit_out=False, aborted=False, raw_coverage=complete_raw_coverage()),
     )
     assert quality.accepted is True
     assert quality.flags == ()
@@ -820,7 +830,7 @@ def test_yellow_flag_and_large_gap_are_rejected() -> None:
     quality = classify_lap(
         lap_time_s=100.0,
         trace=trace,
-        context=LapContext(rainfall=False, race_control_flags=("YELLOW",), is_pit_out=False, aborted=False),
+        context=LapContext(rainfall=False, race_control_flags=("YELLOW",), is_pit_out=False, aborted=False, raw_coverage=complete_raw_coverage(maximum_gap_s=3.69)),
     )
     assert quality.accepted is False
     assert "race-control" in quality.flags
@@ -830,9 +840,9 @@ def test_yellow_flag_and_large_gap_are_rejected() -> None:
 def test_small_progress_noise_is_tolerated_but_reversal_is_not() -> None:
     trace = clean_trace().copy()
     trace["progress"] = [0, .26, .255, .75, 1]
-    assert classify_lap(100, trace, LapContext(False, (), False, False)).accepted
+    assert classify_lap(100, trace, LapContext(False, (), False, False, complete_raw_coverage())).accepted
     trace["progress"] = [0, .26, .19, .75, 1]
-    result = classify_lap(100, trace, LapContext(False, (), False, False))
+    result = classify_lap(100, trace, LapContext(False, (), False, False, complete_raw_coverage()))
     assert not result.accepted
     assert "non-monotonic-progress" in result.flags
 ```
@@ -887,8 +897,8 @@ def classify_lap(lap_time_s: float, trace: pd.DataFrame, context: LapContext) ->
     gaps = np.diff(elapsed) if len(elapsed) > 1 else np.array([lap_time_s])
     reversals = np.maximum(0, -np.diff(progress)) if len(progress) > 1 else np.array([1.0])
     coverage = context.raw_coverage.coverage_ratio
-    maximum_gap = float(gaps.max(initial=lap_time_s))
-    maximum_reversal = float(reversals.max(initial=0))
+    maximum_gap = context.raw_coverage.maximum_gap_s
+    maximum_reversal = context.raw_coverage.maximum_progress_reversal
 
     flags: list[str] = []
     if context.is_pit_out:
@@ -967,7 +977,7 @@ git commit -m "feat(calibration-data): classify qualifying lap quality"
 - Create: `calibration/data/fixtures/silverstone-location.json`
 
 **Interfaces:**
-- Consumes: source geometry CSV and OpenF1 location/car rows.
+- Consumes: immutable geometry bytes selected by a human-readable source manifest. A generated frozen manifest records the normalized format and SHA-256 digest used by the loader; the loader hashes exact bytes before parsing.
 - Produces: `load_canonical_track() -> CanonicalTrack`, `align_lap() -> AlignedLap`, and a distance-indexed trace at 5 m spacing.
 
 - [ ] **Step 1: Write failing alignment tests**
@@ -978,7 +988,7 @@ import numpy as np
 import pandas as pd
 from spa_calibration.alignment import align_progress_to_track, measure_raw_source_coverage, resample_aligned_trace
 import pytest
-from spa_calibration.geometry import CanonicalTrack
+from spa_calibration.geometry import CanonicalTrack, GeometrySource
 
 
 def track() -> CanonicalTrack:
@@ -994,6 +1004,10 @@ def track() -> CanonicalTrack:
         curvature_per_m=np.full(101, 0.01),
         gradient=np.zeros(101),
         sector=np.ones(101, dtype=np.int16),
+        geometry_source=GeometrySource(
+            path=Path("data/geometry/test-ring.csv"), format="csv",
+            source_name="fixture", source_license="CC0-1.0", checksum="0" * 64,
+        ),
     )
 
 
@@ -1073,6 +1087,7 @@ import pandas as pd
 from numpy.typing import NDArray
 from scipy.signal import savgol_filter
 from scipy.spatial import cKDTree
+from .hashing import sha256_bytes
 
 
 @dataclass(frozen=True)
@@ -1114,10 +1129,14 @@ class CanonicalTrack:
 
 
 def _read_geometry_frame(source: GeometrySource) -> pd.DataFrame:
+    payload = source.path.read_bytes()
+    actual = sha256_bytes(payload)
+    if actual != source.checksum:
+        raise ValueError(f"geometry checksum mismatch: {actual} != {source.checksum}")
     if source.format == "csv":
-        return pd.read_csv(source.path)
+        return pd.read_csv(BytesIO(payload))
     if source.format == "spa-reference-json":
-        return adapt_spa_reference_geometry(source.path)
+        return adapt_spa_reference_geometry_bytes(payload)
     raise ValueError(f"unsupported geometry format: {source.format}")
 
 
@@ -1154,7 +1173,8 @@ def load_canonical_track(circuit_id: str, source: GeometrySource) -> CanonicalTr
 import numpy as np
 import pandas as pd
 from scipy.spatial import cKDTree
-from .geometry import CanonicalTrack, GeometrySource
+from .geometry import CanonicalTrack
+from .quality import RawCoverage
 
 
 def project_locations_to_track(location: pd.DataFrame, track: CanonicalTrack) -> pd.DataFrame:
@@ -1177,21 +1197,28 @@ def unwrap_observed_progress(progress_raw: np.ndarray) -> np.ndarray:
 
 
 def measure_raw_source_coverage(location: pd.DataFrame, required_channels: tuple[str, ...]) -> RawCoverage:
-    observed = unwrap_observed_progress(location["progress_raw"].to_numpy(float))
-    coverage = float(np.clip(observed[-1], 0.0, 1.0)) if len(observed) else 0.0
+    raw = location["progress_raw"].to_numpy(float)
+    if not len(raw):
+        return RawCoverage(0.0, 0.0, 0.0, {name: 0.0 for name in required_channels}, float("inf"), 1.0)
+    unwrapped = raw.copy()
+    offset = 0.0
+    for index in range(1, len(unwrapped)):
+        if raw[index] + offset < unwrapped[index - 1] - 0.5:
+            offset += 1.0
+        unwrapped[index] = raw[index] + offset
+    progress_start = float(unwrapped[0])
+    progress_end = float(unwrapped[-1])
+    coverage = float(np.clip(progress_end - progress_start, 0.0, 1.0))
     elapsed = location["elapsed_s"].to_numpy(float)
     gaps = np.diff(elapsed) if len(elapsed) > 1 else np.array([float("inf")])
-    reversals = np.maximum(0.0, -np.diff(observed)) if len(observed) > 1 else np.array([1.0])
+    reversals = np.maximum(0.0, -np.diff(unwrapped)) if len(unwrapped) > 1 else np.array([1.0])
     channel_coverage = {
         channel: float(location[channel].notna().mean()) if channel in location else 0.0
         for channel in required_channels
     }
     return RawCoverage(
-        progress_start=0.0,
-        progress_end=coverage,
-        coverage_ratio=coverage,
-        channel_coverage=channel_coverage,
-        maximum_gap_s=float(gaps.max(initial=0.0)),
+        progress_start=progress_start, progress_end=progress_end, coverage_ratio=coverage,
+        channel_coverage=channel_coverage, maximum_gap_s=float(gaps.max(initial=0.0)),
         maximum_progress_reversal=float(reversals.max(initial=0.0)),
     )
 
@@ -1577,8 +1604,9 @@ def build_paired_deltas(features: pd.DataFrame, treatment_season: int = 2026, re
     ]
     measures = [
         "phase_time_s", "minimum_speed_kph", "exit_speed_50m_kph", "exit_speed_100m_kph",
-        "braking_onset_from_complex_start_m", "braking_length_m", "full_throttle_fraction"
+        "braking_length_m", "full_throttle_fraction"
     ]
+    nullable_measures = ["braking_onset_from_complex_start_m"]
     geometry = [
         "mean_curvature_per_m", "peak_curvature_per_m", "curvature_change_per_m2",
         "gradient_mean", "entry_straight_m", "exit_straight_m", "sustained_load_s"
@@ -1587,6 +1615,12 @@ def build_paired_deltas(features: pd.DataFrame, treatment_season: int = 2026, re
     def aggregate(group: pd.DataFrame) -> pd.Series:
         weights = group.quality_weight.to_numpy(float)
         values = {column: float(np.average(group[column], weights=weights)) for column in measures + geometry}
+        for column in nullable_measures:
+            observed = group[column].notna().to_numpy()
+            values[column] = (
+                float(np.average(group.loc[observed, column], weights=weights[observed])) if observed.any() else None
+            )
+            values[f"{column}_observed"] = bool(observed.any())
         values["quality_weight"] = float(np.mean(weights))
         return pd.Series(values)
 
@@ -1602,6 +1636,10 @@ def build_paired_deltas(features: pd.DataFrame, treatment_season: int = 2026, re
         paired[column] = (paired[f"{column}_treatment"] + paired[f"{column}_reference"]) / 2
     for measure in measures:
         paired[f"delta_{measure}"] = paired[f"{measure}_treatment"] - paired[f"{measure}_reference"]
+    for measure in nullable_measures:
+        mask = paired[f"{measure}_observed_treatment"] & paired[f"{measure}_observed_reference"]
+        paired[f"delta_{measure}_observed"] = mask
+        paired[f"delta_{measure}"] = (paired[f"{measure}_treatment"] - paired[f"{measure}_reference"]).where(mask)
     return paired.sort_values("pair_id").reset_index(drop=True)
 ```
 
@@ -1736,8 +1774,14 @@ def write_corpus(
 
 def verify_corpus(output: Path) -> CorpusManifest:
     manifest = CorpusManifest.model_validate_json((output / "provenance.json").read_text())
-    for filename, expected in manifest.artifact_checksums.items():
+    declared = set(manifest.artifact_checksums)
+    actual_files = {path.name for path in output.iterdir() if path.is_file() and path.name != "provenance.json"}
+    required = set(ARTIFACTS)
+    if declared != required or actual_files != required:
+        raise ValueError(f"corpus artifact set mismatch: declared={sorted(declared)} actual={sorted(actual_files)}")
+    for filename in ARTIFACTS:
         actual = sha256_bytes((output / filename).read_bytes())
+        expected = manifest.artifact_checksums[filename]
         if actual != expected:
             raise ValueError(f"checksum mismatch for {filename}: {actual} != {expected}")
     return manifest
@@ -1752,6 +1796,9 @@ def build_fixture_corpus(fixtures: Path, output: Path, source_cutoff: str) -> Co
         features=pd.read_parquet(fixtures / "corpus-features.parquet"),
         source_cutoff=datetime.fromisoformat(source_cutoff.replace("Z", "+00:00")),
         source_checksums={"fixtures": "0" * 64},
+        source_eligibility_checksum="1" * 64,
+        circuit_year_eligibility_checksum="2" * 64,
+        lap_selection_checksum="3" * 64,
         generated_at=datetime(2026, 7, 14, tzinfo=UTC),
     )
 ```
@@ -2139,6 +2186,24 @@ def build_corpus_from_fixture_bundle(
     )
 
 
+
+
+def normalize_utc_timestamp(value: str | date | datetime | None) -> datetime | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        parsed = value
+    elif isinstance(value, date):
+        parsed = datetime.combine(value, time.min, tzinfo=UTC)
+    elif isinstance(value, str):
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    else:
+        raise TypeError(f"unsupported timestamp value: {type(value).__name__}")
+    if parsed.tzinfo is None:
+        raise ValueError("timestamp must include a timezone")
+    return parsed.astimezone(UTC)
+
+
 async def build_live_corpus(events_path: Path, circuits_path: Path, raw_cache: Path, output: Path, generated_at: datetime):
     event_config = yaml.safe_load(events_path.read_text())
     client = OpenF1Client(ContentAddressedCache(raw_cache), retrieved_at=generated_at)
@@ -2155,8 +2220,8 @@ async def build_live_corpus(events_path: Path, circuits_path: Path, raw_cache: P
                     "meeting_key": event.get("meeting_keys", {}).get(season) or event.get("meeting_keys", {}).get(str(season)),
                     "meeting_name": event.get("meeting_name"),
                     "circuit_short_name": event.get("circuit_short_name"),
-                    "event_date_start": datetime.fromisoformat(window["start"]) if window else None,
-                    "event_date_end": datetime.fromisoformat(window["end"]) if window else None,
+                    "event_date_start": normalize_utc_timestamp(window["start"]) if window else None,
+                    "event_date_end": normalize_utc_timestamp(window["end"]) if window else None,
                 }
                 spec = EventSpec.model_validate(payload)
                 session_bundle = await fetch_session_bundle(client, spec)

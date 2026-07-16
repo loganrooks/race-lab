@@ -165,3 +165,124 @@ mutation: append-only
 **Next action:** run canonical verification, publish one squashed follow-up commit, then rate/reply/resolve the complete comment inventory.
 
 **Lessons review:** new lesson `L-008` recorded.
+
+## A-009 — 2026-07-16T03:09:07Z — Final 22-finding integration prepared
+
+**Evidence status:** remotely-observed starting state; local-work-in-progress; targeted controls locally-verified; canonical verification pending.
+
+**Starting state:** PR #1 was directly observed open and mergeable at exact head `76b8226e0e4365bf757300972174e5fe28319f1c`; Verify run `29458395034` passed for that head; 46 prior threads were resolved and the `FINAL-01` through `FINAL-22` inventory contained exactly 22 unresolved threads. The living status still described an earlier 23-finding follow-up and was stale.
+
+**Work performed:** passed the remote/executable capability gate; extracted the supplied executable package; prepared the synthetic isolated workspace; read the complete handoff, worker reports, project records, closeout plan, and reconciliation ledger; inspected the PR, threads, worker commits, and workflow evidence; classified all 22 findings before editing; reconstructed bounded data-plan corrections against the complete base; selectively integrated and repaired model/browser proposals; audited producers and consumers; and updated the closeout plan and ledger to an inventory-driven contract. The controls change followed TDD: the new historical-marker regression first failed with `AssertionError: ValidationError not raised`, then passed after the validator restricted lesson review to the newest appended activity entry.
+
+**Files changed:** three Spa implementation plans; the PR #1 closeout plan; reconciliation ledger; project-control validator and tests; maintenance README; status, activity, decisions, and lessons records.
+
+**Verification:** focused historical-marker regression passed after the expected RED result; the complete `tests/test_project_control.py` file passed 9/9 at that checkpoint. Complete canonical verification and final diff inspection remain pending and are not claimed by this entry.
+
+**Publication / remote actions:** no GitHub write, reaction, reply, resolution, review request, branch update, or merge was performed. The remote PR head remains `76b8226e0e4365bf757300972174e5fe28319f1c`.
+
+**Result:** all 22 technical claims have explicit dispositions and bounded local corrections; the correction remains unpublished until complete local verification and a same-head pre-publication refresh succeed.
+
+**Next action:** run every required local verifier, inspect every changed file and diff statistic, append exact verification evidence, refresh the PR head, and publish one atomic correction if the head is unchanged.
+
+**Lessons review:** new lessons `L-009` and `L-010` recorded; `D-006` confirms that no approved architecture or release decision changed.
+
+## A-010 — 2026-07-16T03:21:05Z — Final correction unit locally verified
+
+**Evidence status:** locally-verified; not committed; not pushed; remote starting state unchanged since the last direct observation.
+
+**Starting state:** the 22-finding correction unit was complete but canonical verification and full changed-file inspection were still pending.
+
+**Work performed:** completed the horizontal audit, corrected raw canonical coverage endpoints, nullable braking-onset scoring, and pending-artifact checksum parity, then read every changed file and checked all affected data/model/browser/control interfaces.
+
+**Files changed:** the same twelve intended planning, review, project-control, validator, and test files recorded by `A-009`; no production implementation file was added or modified.
+
+**Verification:** `python3 -m unittest tests/test_project_control.py -v` passed 9/9; `python3 scripts/verify_project_control.py` passed; `git diff --check` passed; `bash scripts/verify.sh` passed; package `scripts/verify_integration.sh` passed. The canonical verifier validated 14 canonical files and five plan paths, shell syntax, Python compilation/tests, and Node checks; Ruff and ShellCheck were unavailable and explicitly skipped. A separate syntax sweep validated all complete Python, JSON, JavaScript, and Bash fenced snippets, with one browser class-method fragment checked in its declared class context. Targeted invariants read all 12 changed files, confirmed the exact changed-file set, full plan-size ratios of 1.091 to 1.348 versus the base, 22-row inventory coverage, Python/browser schema parity, exact corpus and geometry contracts, append-only records, planning-only scope, and continued suppression of `1:40.4`. Diff stat: 1,472 insertions and 308 deletions across 12 files.
+
+**Publication / remote actions:** none. No commit, branch update, reaction, reply, resolution, final-review request, or merge has occurred.
+
+**Result:** the first correction publication unit is locally verified and ready for a same-head remote refresh. These software and document checks do not scientifically validate a Spa prediction.
+
+**Next action:** refresh PR #1 and the complete review-thread inventory; publish one atomic commit only if the head remains `76b8226e0e4365bf757300972174e5fe28319f1c`.
+
+**Lessons review:** `L-009` and `L-010` remain the applicable new lessons; no additional lesson was identified during final verification.
+
+## A-011 — 2026-07-16T03:21:47Z — Correct A-010 final diff statistic
+
+**Evidence status:** locally-verified correction to an unpublished activity entry.
+
+**Starting state:** `A-010` recorded the pre-finalization diff statistic rather than the statistic after its own status/activity record changes.
+
+**Work performed:** recomputed the complete working-tree diff after final record updates and preserved the correction as a new append-only entry.
+
+**Files changed:** `project/ACTIVITY.md` only beyond the already verified twelve-file correction set.
+
+**Verification:** `git diff --stat` reports 1,511 insertions and 320 deletions across the same 12 intended files; complete canonical verification is rerun after this correction.
+
+**Publication / remote actions:** none.
+
+**Result:** the authoritative final local diff statistic is 1,511 insertions and 320 deletions across 12 files; the plan files remain larger than their exact-base versions and no truncation occurred.
+
+**Next action:** rerun canonical verification, refresh the exact remote head, and publish the atomic correction only if the head is unchanged.
+
+**Lessons review:** no-new-lesson; this correction applies the append-only evidence rule from `D-004`.
+
+## A-012 — 2026-07-16T03:22:31Z — Clarify self-referential working-tree statistics
+
+**Evidence status:** locally-verified correction to `A-010` and `A-011`.
+
+**Starting state:** each prior entry recorded a working-tree insertion/deletion total and then changed `ACTIVITY.md` by being appended, so neither total could describe the tree that contained itself.
+
+**Work performed:** removed the claim that a pre-append diff statistic was the authoritative final statistic and defined the non-self-referential evidence source for publication.
+
+**Files changed:** `project/ACTIVITY.md` only beyond the existing correction set.
+
+**Verification:** the exact pre-publication file list and diff statistic must be captured immediately before blob/tree creation, and the authoritative committed statistic must be read back from the resulting GitHub commit. Canonical verification is rerun after this clarification.
+
+**Publication / remote actions:** none.
+
+**Result:** `A-010` and `A-011` remain valid timestamped snapshots but are not final self-containing diff totals. Commit readback, not a mutable working-tree entry, will be authoritative for the publication statistic.
+
+**Next action:** rerun canonical verification, capture the pre-publication diff externally, refresh the exact remote head, and publish one atomic commit if unchanged.
+
+**Lessons review:** no-new-lesson; this applies the evidence distinction in `L-002` and append-only correction rule in `D-004`.
+
+## A-013 — 2026-07-16T12:55:25Z — Reconstruct final correction after volatile-workspace loss
+
+**Evidence status:** remotely-observed starting state; locally-reconstructed; targeted controls locally-verified; full verification pending.
+
+**Starting state:** PR #1 remained open and mergeable at exact head `76b8226e0e4365bf757300972174e5fe28319f1c`; 22 final review threads remained unresolved. The prior exact corrected file payload was no longer mounted, while the immutable base package, worker commits/reports, final inventory, status/activity/ledger exports, and hash evidence remained available. Known branch clutter had been reconciled to `main`, the PR branch, and one worker-evidence archive.
+
+**Work performed:** rebuilt the exact-base executable workspace; read project records, final inventory, worker reports, and current remote state; reconstructed bounded data/model/browser corrections from preserved evidence; rejected the destructive data-worker file; copied authoritative final status/activity/ledger exports; replaced stale closeout counts with stable `FINAL-01` through `FINAL-22` rows; added current-entry lesson enforcement under TDD; and recorded branch/workspace guardrails.
+
+**Files changed:** three implementation plans; closeout plan; status, activity, decisions, lessons, and maintenance README; reconciliation ledger; project-control validator and tests. No production calibration path changed.
+
+**Verification:** the new historical-marker regression failed for the expected reason (`ValidationError not raised`), then passed after `_current_activity_entry()` restricted the sentinel check; the full project-control suite passed 9/9. Complete canonical, fenced-snippet, invariant, and diff verification remains pending.
+
+**Publication / remote actions:** no correction commit has been published to PR #1. Earlier remote branch cleanup preserved worker evidence in `b105df73de22059161959673d110e31cb2177daa` and removed eleven stale refs; those actions did not move the PR branch.
+
+**Result:** a new bounded twelve-file correction unit exists locally against the exact base; it is not yet committed, pushed, reviewed, CI-confirmed, or merged.
+
+**Next action:** run every complete verifier, inspect the exact changed-file set and plan-size ratios, refresh the PR head and thread inventory, then publish one atomic commit if the head is unchanged.
+
+**Lessons review:** new lessons `L-011` and `L-012` recorded; `L-009` and `L-010` remain applicable.
+
+
+## A-014 — 2026-07-16T13:06:34Z — Reconstructed correction locally verified
+
+**Evidence status:** locally-verified; not yet committed remotely; not pushed to PR #1.
+
+**Starting state:** `A-013` recorded a freshly reconstructed twelve-file unit with only the controls RED/GREEN cycle and 9/9 project-control tests completed.
+
+**Work performed:** corrected one non-self-contained browser class-method example and fenced the canonical model report definitions; reviewed all twelve changed files; checked producer/consumer contracts horizontally; and captured exact changed-file, plan-size, inventory, syntax, and suppression evidence.
+
+**Files changed:** the same exact twelve planning, review, project-control, validator, and test files recorded by `A-013`; no production calibration implementation file changed.
+
+**Verification:** `python3 -m unittest tests/test_project_control.py -v` passed 9/9; `python3 scripts/verify_project_control.py` passed; `git diff --check` passed; `bash scripts/verify.sh` passed and validated 14 canonical files and five plan paths, Python tests, and Node syntax (Ruff and ShellCheck unavailable/skipped). The targeted invariant sweep confirmed exactly twelve changed files, plan byte sizes data=94,381/model=87,080/app=55,443 versus base 91,025/83,758/49,714, all `FINAL-01` through `FINAL-22` rows in plan and ledger, 18 named cross-contract invariants, 144 executable fenced snippets, planning-only scope, and suppression of `1:40.4`. The integration wrapper's constituent commands pass independently; its combined wrapper process hung in this runtime and is not counted as a successful wrapper run.
+
+**Publication / remote actions:** none for the correction. PR #1 remains at the previously observed exact head; no reaction, reply, resolution, final-review request, or merge was performed.
+
+**Result:** the reconstructed correction unit is locally verified and ready for a same-head remote refresh and atomic publication. Software verification does not scientifically validate a prediction.
+
+**Next action:** refresh PR #1 and all review threads; if unchanged, build and publish one exact-parent correction commit, read it back, and require exact-head CI before any thread action.
+
+**Lessons review:** no-new-lesson; `L-009` through `L-012` cover the observed integration, truncation, workspace-identity, and branch-cleanup failures.

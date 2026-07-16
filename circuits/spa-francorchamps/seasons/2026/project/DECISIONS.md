@@ -64,3 +64,15 @@ initiative: spa-2026-calibration
 **Affected interfaces:** status counters, activity entries, reconciliation ledger, PR closeout criteria.
 
 **Reversal conditions:** none unless the replacement remains at least as explicit.
+
+## D-006 — Accepted — Final reconciliation preserves approved architecture
+
+**Decision:** `FINAL-01` through `FINAL-22` correct implementation-plan, fixture, validator, provenance, and review-control contradictions without changing `D-001` through `D-005`.
+
+**Rationale:** Every accepted finding is satisfiable inside the approved estimand, release-gate conjunction, planning-only boundary, living-record authority, and separated PR-action model.
+
+**Rejected alternatives:** reopening the estimand; weakening release evidence; copying the destructive data-worker rewrite; implementing production functionality during closeout.
+
+**Affected interfaces:** data, model, browser, artifact, CLI, fixtures, controls, closeout, and reconciliation records.
+
+**Reversal conditions:** a future verified finding demonstrates a contradiction in an approved premise and the user authorizes a separately recorded architectural change.

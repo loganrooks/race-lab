@@ -4,16 +4,14 @@ initiative: spa-2026-calibration
 plan_id: SPA-PR1-CLOSEOUT-2026-07-15
 status: active
 scope: planning-only
-source_head: 1ffaf2d232f6bafd134fafa94ca067683744b639
+source_head: 76b8226e0e4365bf757300972174e5fe28319f1c
 ---
 
 # Spa 2026 PR #1 Closeout Plan
 
-> **For agentic workers:** Execute this plan task-by-task. Before substantive work, read `../project/README.md`, `../project/STATUS.md`, and the latest entries in `ACTIVITY.md`, `DECISIONS.md`, and `LESSONS.md`. Do not implement production calibration functionality in this closeout.
+> Execute against the exact named head. Read the maintenance records first. Do not implement production calibration functionality or publish a prediction.
 
-**Goal:** Correct the twelve fresh Codex findings on PR #1, restore cross-plan consistency, complete review hygiene, and merge a coherent planning package without reopening approved architecture.
-
-**Architecture:** This is a bounded reconciliation pass over the existing four-plan package. Data, model, browser, project-control, verification, and PR actions remain separate work units, but all are published only after a horizontal consistency review. The provisional Spa 2026 `1:40.4` estimate remains suppressed.
+**Goal:** Publish the canonical `FINAL-01` through `FINAL-22` reconciliation as one verified commit, complete the corresponding review actions, obtain one clean final review, and merge PR #1.
 
 **Canonical verification:**
 
@@ -23,248 +21,159 @@ bash scripts/verify.sh
 
 ## Global constraints
 
-- Planning and documentation only; no production calibration implementation.
-- Evaluate external review findings before editing.
-- Preserve the approved estimand, condition scenario, complete coherent profile draws, temporal isolation, and fail-closed release behavior.
-- Keep observed, derived, inferred, simulated, provisional, and validated quantities distinct.
-- Track finding evaluation, artifact change, reaction, inline reply, thread resolution, and fresh-review request separately.
-- Update `project/STATUS.md` and append `project/ACTIVITY.md` before publication.
-- Update `project/DECISIONS.md` when a load-bearing decision changes.
-- Update `project/LESSONS.md`, or record `lessons_reviewed: no-new-lesson`, for every review-reconciliation publication.
+- Planning-only scope; the provisional `1:40.4` estimate remains suppressed.
+- Preserve coherent car-driver profiles, complete field draws, temporal isolation, uncertainty calibration, provenance, physical feasibility, and fail-closed release behavior.
+- Treat finding evaluation, artifact correction, reaction, inline reply, resolution, final-review request, and merge as separate states.
+- Refresh PR head and the full thread inventory immediately before publication and review actions.
 
----
+## Completed foundations
 
-### CTRL-01 — Establish durable project records
+### CTRL-01 — Durable project records
+- [x] Maintain authoritative status, append-only activity, decisions, lessons, maintenance rules, and stable task IDs.
 
-**Files:**
-- Create: `circuits/spa-francorchamps/seasons/2026/project/README.md`
-- Create: `circuits/spa-francorchamps/seasons/2026/project/STATUS.md`
-- Create: `circuits/spa-francorchamps/seasons/2026/project/ACTIVITY.md`
-- Create: `circuits/spa-francorchamps/seasons/2026/project/DECISIONS.md`
-- Create: `circuits/spa-francorchamps/seasons/2026/project/LESSONS.md`
+### CTRL-02 — Project-record enforcement
+- [x] Validate records, active tasks, counters, append-only history, diff-coupled updates, and current-entry lesson disposition.
 
-- [x] Define authority, mutation rules, freshness policy, and recovery procedure.
-- [x] Seed current state from the remotely observed PR and review state.
-- [x] Reconstruct prior activity without rewriting or overstating evidence.
-- [x] Record load-bearing decisions and reusable lessons with stable IDs.
+### DATA-01 — Event-resolution contract
+- [x] Require circuit-unique event identity and typed timestamp boundaries.
 
-### CTRL-02 — Enforce project-record maintenance
+### DATA-02 — Canonical geometry contract
+- [x] Use configured immutable geometry sources and retain provenance.
 
-**Files:**
-- Create: `scripts/verify_project_control.py`
-- Create: `tests/test_project_control.py`
-- Modify: `scripts/verify.sh`
-- Modify: `AGENTS.md`
-- Create: `.github/workflows/verify.yml`
+### DATA-03 — Raw source coverage
+- [x] Measure completeness before normalization or resampling.
 
-- [x] Validate required project-control files and front matter.
-- [x] Validate stable task, activity, decision, and lesson IDs.
-- [x] Validate active-task references and review-action counters.
-- [x] Enforce append-only activity history when a merge base contains prior history.
-- [x] Enforce diff-coupled updates to status, activity, decisions, and lessons.
-- [x] Run the canonical verifier in GitHub Actions.
+### MODEL-01 — Coherent-lap validation
+- [x] Preserve lap/profile identity through scoring.
 
----
+### MODEL-02 — Complete release-gate representation
+- [x] Include every configured mandatory release gate.
 
-### DATA-01 — Complete the event-resolution contract
+### MODEL-03 — Control-constraint interface
+- [x] Reconcile solver declarations and calls.
 
-**Finding:** `PRRT_kwDOTZdGvM6RO8R2`
+### MODEL-04 — Physical segment timing
+- [x] Integrate exactly `n - 1` real segments for `n` samples.
 
-- [x] Verify the finding against the current data-pipeline plan.
-- [x] Require every event row to contain either `meeting_key` or the complete fallback discriminator set: `meeting_name`, `circuit_short_name`, `date_start`, and `date_end`.
-- [x] Update every example `events.yaml` row, not only Miami.
-- [x] Add plan tests for missing metadata and multiple events in one country.
-- [x] Record disposition and regression evidence in the reconciliation ledger.
+### MODEL-05 — Complete field draws
+- [x] Reject missing, duplicate, or solver-failed profile-attempt fields.
 
-### DATA-02 — Reconcile the canonical-geometry loader interface
+### MODEL-06 — Pre-checksum release validation
+- [x] Validate complete semantics before and after checksum finalization.
 
-**Finding:** `PRRT_kwDOTZdGvM6RO8R-`
+### APP-01 — Validate every artifact status
+- [x] Fail malformed pending, failed, or released artifacts closed.
 
-- [x] Verify the declaration and every call site.
-- [x] Adopt one exact signature that consumes the configured geometry path and source metadata.
-- [x] Search all producers and consumers for the old signature.
-- [x] Add a plan test covering a non-CSV Spa adapter and retained provenance.
+### APP-02 — Normalize telemetry channels
+- [x] Remove legacy keys at the adapter boundary.
 
-### DATA-03 — Measure source coverage before normalization
+### APP-03 — Complete released fixtures
+- [x] Use complete report, provenance, interval, trace, timing, and scenario fixtures.
 
-**Finding:** `PRRT_kwDOTZdGvM6RO8SK`
+### DOCS-01 — Reconciliation ledger
+- [x] Record the complete review history and separate PR action states.
 
-- [x] Verify that truncated source progress is currently stretched to `0..1`.
-- [x] Specify raw coverage against the complete canonical track before monotonic repair or resampling.
-- [x] Add a middle-60%-of-lap fixture that remains incomplete and rejected.
-- [x] Confirm resampling cannot upgrade an ineligible lap.
+### VERIFY-01 — Horizontal contract review
+- [x] Review all producers and consumers across data, model, artifact, CLI, generator, browser, tests, and records.
 
----
+### VERIFY-02 — Canonical local verification
+- [x] Verify the prior correction unit; rerun before each publication candidate.
 
-### MODEL-01 — Preserve coherent-lap identity in validation
+## Final 22-finding inventory
 
-**Finding:** `PRRT_kwDOTZdGvM6RO8Rw`
+Each completed row records a technical disposition and a bounded correction in the reconciliation ledger. Remote actions remain pending until the exact correction head is CI-confirmed.
 
-- [x] Preserve `lap_slug` through model and baseline projections and joins.
-- [x] Aggregate and score by coherent lap/profile before fold-level aggregation.
-- [x] Add a multi-profile regression fixture that would fail under fleet-wide summation.
+### FINAL-01 — Import `RawCoverage`
+- [x] Import the annotation type and construct complete fixtures.
 
-### MODEL-02 — Represent every configured release gate
+### FINAL-02 — Deterministic geometry manifest
+- [x] Separate human source metadata from frozen format/checksum evidence.
 
-**Finding:** `PRRT_kwDOTZdGvM6RO8R8`
+### FINAL-03 — Report-level release conjunction
+- [x] Conjoin every mandatory report flag and nested check; reject set mismatch.
 
-- [x] Reconcile `ReleaseGates` with every key in `release-gates.yaml`.
-- [x] Reject unknown or silently dropped configuration keys.
-- [x] Route all release evidence through one `combine_release_evidence()` authority.
-- [x] Confirm 95% coverage, WIS, CRPS, rolling-origin, physical-feasibility, identifiability, baseline, and point-error gates all participate in `passed`.
+### FINAL-04 — Preserve field-best identity
+- [x] Carry profile, team, driver, draw, and attempt through evidence selection.
 
-### MODEL-03 — Reconcile the control-constraint solver interface
+### FINAL-05 — Five-point field interval
+- [x] Require finite ordered 95%/80%/median bounds in Python and browser contracts.
 
-**Finding:** `PRRT_kwDOTZdGvM6RO8SA`
+### FINAL-06 — Sampled-attempt evidence
+- [x] Store trace and timing from the exact varied attempt used for its summary.
 
-- [x] Verify every `_solve_speed_envelope()` declaration and call.
-- [x] Define the exact `control_constraints` type and ownership.
-- [x] Add a plan test that exercises the same signature used by `simulate_lap()`.
+### FINAL-07 — Released trace and timing
+- [x] Require coherent playable arrays before source selection.
 
-### MODEL-04 — Integrate elapsed time over actual path segments
+### FINAL-08 — Synchronize publication records
+- [x] Record the directly observed head and distinguish local from pushed state.
 
-**Finding:** `PRRT_kwDOTZdGvM6RO8SN`
+### FINAL-09 — Verify geometry bytes
+- [x] Hash exact source bytes before parsing.
 
-- [x] Replace the artificial post-finish segment with `n - 1` actual segments for `n` samples.
-- [x] Emit elapsed time as zero plus cumulative segment times.
-- [x] Require exact agreement among trace endpoint, lap summary, sectors, and artifact.
-- [x] Add constant-speed, nonuniform-spacing, and no-post-finish-segment tests.
+### FINAL-10 — Analogue evidence schema
+- [x] Adapt raw observed features into stable phase identity and observed year; reject paired deltas.
 
-### MODEL-05 — Require complete field draws
+### FINAL-11 — Current lesson disposition
+- [x] Enforce the newest activity entry under RED/GREEN regression coverage.
 
-**Finding:** `PRRT_kwDOTZdGvM6RO8SR`
+### FINAL-12 — Geometry provenance fixture
+- [x] Supply complete `GeometrySource` fixture data.
 
-- [x] Freeze the supported profile set before sampling.
-- [x] Require every profile and both declared attempts in every field draw.
-- [x] Reject duplicate, missing, filtered, or solver-failed profiles rather than silently changing the represented field.
-- [x] Make incomplete field draws release-blocking.
+### FINAL-13 — Validator clock contract
+- [x] Provide a safe public UTC default while deterministic callers inject time.
 
-### MODEL-06 — Validate release semantics before checksum finalization
+### FINAL-14 — Inventory-driven closeout
+- [x] Use stable row IDs instead of stale prose counts.
 
-**Finding:** `PRRT_kwDOTZdGvM6RO8Ry`
+### FINAL-15 — Raw coverage fixtures
+- [x] Supply pre-normalization coverage in every quality context.
 
-- [x] Build the unsigned artifact.
-- [x] Run complete semantic release validation before hashing.
-- [x] Compute and attach the checksum only after semantic validation passes.
-- [x] Run final checksum-plus-schema validation before serialization.
-- [x] Add fixtures for malformed intervals, unsupported scenarios, and stale timestamps.
+### FINAL-16 — Observed feed gaps
+- [x] Use consecutive source intervals only.
 
----
+### FINAL-17 — Nullable braking onset
+- [x] Aggregate and score only paired observed outcomes with an explicit mask.
 
-### APP-01 — Validate every artifact status before bundling
+### FINAL-18 — Complete release fixture corpus
+- [x] Include reports, valid digests, provenance, identity, intervals, trace, timing, and scenario.
 
-**Finding:** `PRRT_kwDOTZdGvM6RO8SC`
+### FINAL-19 — Typer `--artifact`
+- [x] Declare the documented required option explicitly.
 
-- [x] Invoke `validateCalibrationArtifact()` for pending, failed-validation, and released artifacts.
-- [x] Verify checksums where required, but never treat checksum validity as semantic release validity.
-- [x] Replace any invalid artifact with the frozen pending fallback.
-- [x] Confirm unreleased artifacts cannot expose field, team, or predicted-corner estimates.
+### FINAL-20 — Exact corpus artifact set
+- [x] Require equality among canonical files, manifest keys, filesystem files, and digests.
 
-### APP-02 — Remove legacy telemetry keys at the adapter boundary
+### FINAL-21 — Raw reversal gate
+- [x] Use pre-repair reversal evidence in lap acceptance.
 
-**Finding:** `PRRT_kwDOTZdGvM6RO8SI`
+### FINAL-22 — Timestamp normalization
+- [x] Normalize strings, `date`, and aware `datetime` objects to UTC at boundaries.
 
-- [x] Destructure and discard `speed`, `throttle`, and `brake`.
-- [x] Emit only normalized `speedKph`, `throttlePct`, and `brakePct` channels.
-- [x] Add tests asserting both value parity and absence of legacy keys.
+## Active publication and closeout gates
 
-### APP-03 — Repair the released browser-schema fixture
+### PR-01 — Publish atomic correction
+- [ ] Refresh PR #1 and require exact head `76b8226e0e4365bf757300972174e5fe28319f1c`.
+- [ ] Rerun complete local verification and verify exactly twelve intended files.
+- [ ] Create one commit whose sole parent is the exact head and fast-forward the PR branch without force.
+- [ ] Read back the commit, exact changed files, tree, and diff statistics.
+- [ ] Require a successful retrievable `Verify` run for the exact correction SHA.
 
-**Finding:** `PRRT_kwDOTZdGvM6RO8SV`
+### PR-02 — Complete 22-thread action sweep
+- [ ] Refresh the complete same-head inventory.
+- [ ] Apply missing positive reactions only after technical evaluation.
+- [ ] Post one specific inline reply per final finding with correction SHA and Verify evidence.
+- [ ] Resolve each completed thread and refresh the inventory.
 
-- [x] Create one complete valid released-artifact fixture helper.
-- [x] Include all release reports, provenance, scenario metadata, timestamps, intervals, and released prediction data.
-- [x] Mutate exactly one property per negative test so each guard is actually exercised.
-
----
-
-### DOCS-01 — Extend the reconciliation ledger
-
-**File:** `circuits/spa-francorchamps/seasons/2026/reviews/2026-07-15-plan-reconciliation.md`
-
-- [x] Add section `C. Fresh Codex review of 1ffaf2d`.
-- [x] Record thread ID, severity, verification, disposition, affected interfaces, changes, regression evidence, reaction, reply, and resolution for all twelve findings.
-- [x] Record any rejected or modified finding with technical reasoning.
-
-### VERIFY-01 — Perform a horizontal contract review
-
-- [x] Check Plan A outputs against every Plan B consumer.
-- [x] Check Plan B artifact fields against every Plan C validator and renderer.
-- [x] Check Python builder, Python validator, CLI, JavaScript generator, and browser validator against one release predicate.
-- [x] Check scenario, estimand, complete-profile, attempt-count, and uncertainty semantics across all four plans.
-- [x] Search the complete package for superseded signatures and field names.
-
-### VERIFY-02 — Run and record canonical verification
-
-- [x] Run `bash scripts/verify.sh` from a clean checkout with declared tooling installed.
-- [x] Read the complete output and record the exact command, exit status, and relevant versions.
-- [x] Distinguish local verification from CI confirmation.
-- [x] Do not treat software checks as scientific model validation.
-
----
-
-### PR-01 — Finish the original review-action sweep
-
-- [ ] Re-check all 23 original inline comments.
-- [ ] Apply reactions to the 18 comments that remain unrated, based on documented technical evaluation.
-- [ ] Confirm the original action ledger separately records `rated`, `replied`, and `resolved` counts.
-
-### PR-02 — Reconcile the twelve fresh findings
-
-- [ ] Apply a reaction to every fresh comment after evaluation.
-- [ ] Reply in the corresponding inline thread with disposition, revised section, and verification evidence.
-- [ ] Resolve only threads whose finding is fully addressed or explicitly rejected with evidence.
-- [ ] Refresh exact counts in `project/STATUS.md` and append `project/ACTIVITY.md`.
-
-### PR-03 — Request one final review
-
-- [ ] Confirm the intended head is stable and canonical verification passes.
-- [ ] Post one summary comment linking the reconciliation ledger and project status.
-- [ ] Request exactly one fresh Codex review.
-- [ ] Reassess any new finding without reopening approved architecture unless it exposes a genuine contradiction.
+### PR-03 — Synchronize evidence and request one final review
+- [ ] Publish only the minimal living-record evidence update required by observed remote actions.
+- [ ] Obtain exact-head CI for that evidence commit.
+- [ ] Request exactly one fresh Codex review on the stable head.
 
 ### PR-04 — Merge and hand off
-
-- [ ] Confirm no valid blocking review findings remain.
-- [ ] Confirm all required reactions, replies, and resolutions are complete.
-- [ ] Update `STATUS.md`, append `ACTIVITY.md`, and review `DECISIONS.md` and `LESSONS.md`.
-- [ ] Merge PR #1 using the repository's chosen merge method.
-- [ ] Record the merge commit as remotely observed and CI-confirmed only when direct evidence exists.
-- [ ] Set the next exact action to Plan A source-feasibility and eligibility execution.
+- [ ] Confirm no valid blocking findings remain and CI is green.
+- [ ] Merge using squash with the expected head SHA.
+- [ ] Record exact merge evidence and leave the next implementation action.
 
 ## Completion definition
 
-PR #1 closeout is complete only when all twelve fresh findings have documented dispositions, the plan package has no known cross-plan contradictions, canonical verification passes, all required PR actions are individually accounted for, one final review has no valid blocking findings, the provisional `1:40.4` estimate remains suppressed, and no production calibration functionality has entered the planning-only PR.
-
-### FOLLOWUP-01 — Accept the documented no-new-lesson sentinel
-- [x] Accept both `**Lessons review:** no-new-lesson` and `lessons_reviewed: no-new-lesson` with a regression test.
-
-### FOLLOWUP-02 — Instantiate the canonical-track fixture
-- [x] Call `track()` in the resampling test.
-
-### FOLLOWUP-03 — Preserve discrete sector labels
-- [x] Use a previous-sample lookup rather than continuous interpolation for canonical sectors.
-
-### FOLLOWUP-04 — Complete feature-test metadata
-- [x] Supply required track, complex, and apex distances.
-
-### FOLLOWUP-05 — Propagate corpus eligibility checksums
-- [x] Require and persist source-eligibility, circuit-year, and lap-selection checksums through every corpus builder.
-
-### FOLLOWUP-06 — Charge ERS energy on the first segment
-- [x] Align deploy/regen samples to all `n - 1` physical segments and suppress any post-finish sample.
-
-### FOLLOWUP-07 — Use produced phase-distance field names
-- [x] Serialize `phase_start_distance_m` and `phase_end_distance_m`.
-
-### FOLLOWUP-08 — Reject unsupported prediction statuses
-- [x] Enforce the shared `pending | failed-validation | released` enum in Python.
-
-### FOLLOWUP-09 — Render every phase in a selected complex
-- [x] Filter and render all matching phase evidence and analogue groups.
-
-### FOLLOWUP-10 — Preserve season-specific event windows
-- [x] Confirm the current event manifest already supplies season-specific windows; no further plan change required.
-
-### FOLLOWUP-11 — Synchronize reviewed-head and CI evidence
-- [x] Replace stale status evidence with the directly observed corrected head and workflow result before claiming CI.
+Closeout is complete only when all 22 rows are published and individually accounted for, exact-head CI succeeds, one final review has no valid blocker, PR #1 is merged, the planning-only boundary is preserved, and no suppressed prediction value is released.

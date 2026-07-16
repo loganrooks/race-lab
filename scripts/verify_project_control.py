@@ -234,6 +234,11 @@ def ensure_append_only(old_text: str, new_text: str) -> None:
         raise ValidationError("ACTIVITY.md violates append-only history; append a correction entry instead")
 
 
+def _current_activity_entry(activity_text: str) -> str:
+    entries = _entry_sections(activity_text, ID_PATTERNS["activity"])
+    return entries[-1][1] if entries else activity_text
+
+
 def validate_required_record_updates(
     changed_files: Iterable[str], *, activity_text: str = ""
 ) -> None:
@@ -270,7 +275,7 @@ def validate_required_record_updates(
         no_new_lesson = bool(
             re.search(
                 r"(?:Lessons review:\*\*\s*no-new-lesson|lessons_reviewed:\s*no-new-lesson)",
-                activity_text,
+                _current_activity_entry(activity_text),
                 re.IGNORECASE,
             )
         )
