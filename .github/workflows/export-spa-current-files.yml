@@ -16,25 +16,11 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
-      - name: Stage current files
-        run: |
-          mkdir -p /tmp/spa-current
-          cp --parents \
-            circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md \
-            circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md \
-            circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-app-integration.md \
-            circuits/spa-francorchamps/seasons/2026/plans/2026-07-15-pr1-closeout-plan.md \
-            circuits/spa-francorchamps/seasons/2026/project/README.md \
-            circuits/spa-francorchamps/seasons/2026/project/STATUS.md \
-            circuits/spa-francorchamps/seasons/2026/project/ACTIVITY.md \
-            circuits/spa-francorchamps/seasons/2026/project/LESSONS.md \
-            circuits/spa-francorchamps/seasons/2026/reviews/2026-07-15-plan-reconciliation.md \
-            scripts/verify_project_control.py \
-            tests/test_project_control.py \
-            /tmp/spa-current/
+      - name: Archive exact PR1 head
+        run: git archive 76b8226e0e4365bf757300972174e5fe28319f1c -o /tmp/race-lab-head-76b8226.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: spa-current-head-76b8226
-          path: /tmp/spa-current
+          name: race-lab-head-76b8226
+          path: /tmp/race-lab-head-76b8226.zip
           if-no-files-found: error
           retention-days: 1
