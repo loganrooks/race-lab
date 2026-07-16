@@ -162,7 +162,7 @@ def test_circuit_folds_are_sorted_and_complete() -> None:
     assert [fold.held_out for fold in circuit_folds(frame())] == ["a", "b", "c"]
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [ ] **Step 2: Run and verify RED**
 
 ```bash
 cd calibration
@@ -822,7 +822,6 @@ class VehicleParameters:
         )
 
 
-
 @dataclass(frozen=True)
 class ControlConstraints:
     maximum_speed_ms: np.ndarray
@@ -990,7 +989,6 @@ def simulate_lap(line: pd.DataFrame, parameters: VehicleParameters, corrections:
     return LapSolution(float(trace.elapsed_s.iloc[-1]), trace, parameters, ers_scale)
 ```
 
-
 ```python
 # calibration/src/spa_calibration/line_optimizer.py
 from dataclasses import dataclass
@@ -1108,7 +1106,13 @@ def test_piecewise_model_is_rejected_without_held_out_gain() -> None:
 # calibration/tests/test_validation.py
 from pathlib import Path
 import yaml
-from spa_calibration.validation import ReleaseGates, ValidationMetrics, evaluate_release_gates
+from spa_calibration.validation import (
+    GateReport,
+    ReleaseGates,
+    ValidationMetrics,
+    combine_release_evidence,
+    evaluate_release_gates,
+)
 
 
 def test_release_requires_every_metric_and_baseline_improvement() -> None:
@@ -1128,6 +1132,22 @@ def test_release_requires_every_metric_and_baseline_improvement() -> None:
     )
     assert evaluate_release_gates(metrics, gates).passed
     assert not evaluate_release_gates(metrics.__class__(**{**metrics.__dict__, "model_lap_mae_s": .75}), gates).passed
+
+
+def test_release_conjoins_each_report_passed_flag_and_nested_check() -> None:
+    gates = ReleaseGates.from_mapping(yaml.safe_load(Path("config/release-gates.yaml").read_text()))
+    reports = [
+        GateReport(name=name, passed=True, checks={"complete": True})
+        for name in REQUIRED_RELEASE_REPORTS
+    ]
+    assert combine_release_evidence(gates, *reports).passed
+    failed = [
+        report if report.name != "rollingOrigin" else GateReport(report.name, False, {"complete": True})
+        for report in reports
+    ]
+    evaluation = combine_release_evidence(gates, *failed)
+    assert evaluation.passed is False
+    assert evaluation.checks["rollingOrigin.passed"] is False
 ```
 
 - [ ] **Step 2: Run and verify RED**
@@ -1204,6 +1224,13 @@ class ValidationMetrics:
     crps_s: float
     model_lap_mae_s: float
     baseline_lap_mae_s: float
+
+
+@dataclass(frozen=True)
+class GateReport:
+    name: str
+    passed: bool
+    checks: dict[str, bool]
 
 
 @dataclass(frozen=True)
@@ -1326,7 +1353,6 @@ def run_loco_validation(
     }
 ```
 
-
 The same module must implement `run_rolling_origin_validation()`. Each origin is defined by an immutable UTC cutoff before the held-out event; training rows require `date_start < cutoff`, and held-out realized conditions never enter the scenario inputs. `combine_release_evidence(loco, rolling, uncertainty, baselines, ablations, identifiability, feasibility)` is the only function allowed to set `release_gates.passed`; it requires every report to pass.
 
 ```python
@@ -1338,10 +1364,21 @@ def combine_release_evidence(gates: ReleaseGates, *reports: GateReport) -> GateE
         required.discard("physicalFeasibility")
     if not gates.requires_identifiability:
         required.discard("identifiability")
-    missing = required - {report.name for report in reports}
+
+    reports_by_name: dict[str, GateReport] = {}
+    for report in reports:
+        if report.name in reports_by_name:
+            raise ValueError(f"duplicate release report: {report.name}")
+        reports_by_name[report.name] = report
+    missing = required - reports_by_name.keys()
     if missing:
         raise ValueError(f"missing release reports: {sorted(missing)}")
-    checks = {f"{report.name}.{key}": value for report in reports for key, value in report.checks.items()}
+
+    checks: dict[str, bool] = {}
+    for name, report in sorted(reports_by_name.items()):
+        checks[f"{name}.passed"] = report.passed is True
+        for key, value in sorted(report.checks.items()):
+            checks[f"{name}.{key}"] = value is True
     return GateEvaluation(passed=all(checks.values()), checks=checks)
 ```
 
@@ -1352,7 +1389,7 @@ cd calibration
 python -m pytest tests/test_regimes.py tests/test_validation.py -q
 ```
 
-Expected: `2 passed`.
+Expected: `3 passed`.
 
 - [ ] **Step 5: Commit validation**
 
@@ -1373,28 +1410,48 @@ git commit -m "feat(calibration-model): validate with circuit holdouts"
 - Create: `calibration/config/spa-analogues.yaml`
 
 **Interfaces:**
-- Consumes: Spa phase features, training phase features, `CalibrationFit`, team priors, and road geometry.
-- Produces: `nearest_analogues()`, `predict_spa_team()`, and `predict_field_best()`.
+- Consumes: Spa phase features; a raw Plan A `FeatureRecord` frame adapted to `AnalogueEvidenceRecord`; the separate Plan A paired-delta frame only for model fitting; `CalibrationFit`; coherent car-driver priors; and road geometry.
+- Produces: `build_analogue_evidence_frame()`, `nearest_analogues()`, `predict_spa_team()`, and `predict_field_best()`.
+- Raw feature frames and paired-delta frames are not interchangeable: analogue evidence requires one observed `season` and one stable observed phase identity, while posterior fitting consumes `pair_id`, treatment/reference seasons, and deltas.
 
 - [ ] **Step 1: Write failing analogue and coherence tests**
 
 ```python
 # calibration/tests/test_analogues.py
 import pandas as pd
-from spa_calibration.analogues import nearest_analogues
+import pytest
+from spa_calibration.analogues import build_analogue_evidence_frame, nearest_analogues
 
 
 def test_weights_sum_to_one_and_prefer_feature_match() -> None:
-    spa = pd.Series({"mean_curvature_per_m": .01, "entry_straight_m": 500, "exit_straight_m": 100})
+    spa = pd.Series({"mean_curvature_per_m": .01, "peak_curvature_per_m": .02, "gradient_mean": 0, "entry_straight_m": 500, "exit_straight_m": 100, "sustained_load_s": 2})
     candidates = pd.DataFrame({
-        "phase_id": ["close", "far"],
+        "analogue_phase_id": ["close", "far"],
+        "observed_year": [2026, 2025],
         "mean_curvature_per_m": [.011, .001],
+        "peak_curvature_per_m": [.021, .003],
+        "gradient_mean": [0, .02],
         "entry_straight_m": [480, 50],
         "exit_straight_m": [110, 600],
+        "sustained_load_s": [2.1, .4],
     })
     result = nearest_analogues(spa, candidates, k=2)
     assert abs(result.weight.sum() - 1) < 1e-9
-    assert result.iloc[0].phase_id == "close"
+    assert result.iloc[0].analogue_phase_id == "close"
+
+
+def test_analogue_adapter_requires_raw_phase_identity_and_observed_year() -> None:
+    raw = pd.DataFrame({
+        "lap_slug": ["2026-lap"], "season": [2026], "circuit_id": ["silverstone"],
+        "complex_id": ["copse"], "phase_type": ["apex"], "archetype": ["fast"],
+        "mean_curvature_per_m": [.01], "peak_curvature_per_m": [.02], "gradient_mean": [0],
+        "entry_straight_m": [400], "exit_straight_m": [350], "sustained_load_s": [2.5],
+    })
+    evidence = build_analogue_evidence_frame(raw)
+    assert evidence.loc[0, "analogue_phase_id"] == "2026-lap|copse|apex"
+    assert evidence.loc[0, "observed_year"] == 2026
+    with pytest.raises(ValueError, match="paired-delta"):
+        build_analogue_evidence_frame(raw.assign(pair_id="pair", treatment_season=2026, reference_season=2025))
 ```
 
 ```python
@@ -1403,17 +1460,19 @@ import pytest
 from spa_calibration.spa_predictor import IncompleteFieldDrawError, TeamLapSample, predict_field_best
 
 
-def test_field_best_requires_every_profile_and_both_attempts() -> None:
+def test_field_best_requires_every_profile_and_preserves_same_team_driver_identity() -> None:
     samples = [
-        TeamLapSample("A-DRV", "A", "DRV", 0, 0, 100.0, (30, 40, 30)),
-        TeamLapSample("A-DRV", "A", "DRV", 0, 1, 99.8, (30, 39.8, 30)),
-        TeamLapSample("B-DRV", "B", "DRV", 0, 0, 99.5, (35, 34.5, 30)),
-        TeamLapSample("B-DRV", "B", "DRV", 0, 1, 99.7, (35, 34.7, 30)),
+        TeamLapSample("A|AAA", "A", "AAA", 0, 0, 100.0, (30, 40, 30)),
+        TeamLapSample("A|AAA", "A", "AAA", 0, 1, 99.8, (30, 39.8, 30)),
+        TeamLapSample("A|BBB", "A", "BBB", 0, 0, 99.5, (35, 34.5, 30)),
+        TeamLapSample("A|BBB", "A", "BBB", 0, 1, 99.7, (35, 34.7, 30)),
     ]
-    field = predict_field_best(samples, expected_profiles=("A-DRV", "B-DRV"))
-    assert [(row.draw, row.team_name, row.lap_time_s) for row in field] == [(0, "B", 99.5)]
+    field = predict_field_best(samples, expected_profiles=("A|AAA", "A|BBB"))
+    assert [(row.profile_id, row.driver_acronym, row.draw, row.attempt, row.lap_time_s) for row in field] == [
+        ("A|BBB", "BBB", 0, 0, 99.5)
+    ]
     with pytest.raises(IncompleteFieldDrawError):
-        predict_field_best(samples[:-1], expected_profiles=("A-DRV", "B-DRV"))
+        predict_field_best(samples[:-1], expected_profiles=("A|AAA", "A|BBB"))
 ```
 
 - [ ] **Step 2: Run and verify RED**
@@ -1425,10 +1484,11 @@ python -m pytest tests/test_analogues.py tests/test_spa_predictor.py -q
 
 Expected: missing modules.
 
-- [ ] **Step 3: Implement standardized similarity and coherent field minimum**
+- [ ] **Step 3: Implement explicit analogue evidence, coherent field identity, and attempt-specific evidence**
 
 ```python
 # calibration/src/spa_calibration/analogues.py
+from dataclasses import asdict, dataclass
 import numpy as np
 import pandas as pd
 
@@ -1438,6 +1498,52 @@ SIMILARITY_FEATURES = (
 )
 
 
+@dataclass(frozen=True)
+class AnalogueEvidenceRecord:
+    analogue_phase_id: str
+    observed_year: int
+    circuit_id: str
+    complex_id: str
+    phase_type: str
+    archetype: str
+    mean_curvature_per_m: float
+    peak_curvature_per_m: float
+    gradient_mean: float
+    entry_straight_m: float
+    exit_straight_m: float
+    sustained_load_s: float
+
+
+def build_analogue_evidence_frame(raw_features: pd.DataFrame) -> pd.DataFrame:
+    paired_markers = {"pair_id", "treatment_season", "reference_season"} & set(raw_features.columns)
+    if paired_markers:
+        raise ValueError(f"analogue evidence requires raw FeatureRecord rows, not a paired-delta frame: {sorted(paired_markers)}")
+    required = {
+        "lap_slug", "season", "circuit_id", "complex_id", "phase_type", "archetype",
+        *SIMILARITY_FEATURES,
+    }
+    missing = required - set(raw_features.columns)
+    if missing:
+        raise ValueError(f"raw analogue features missing columns: {sorted(missing)}")
+    records = [
+        AnalogueEvidenceRecord(
+            analogue_phase_id=f"{row.lap_slug}|{row.complex_id}|{row.phase_type}",
+            observed_year=int(row.season),
+            circuit_id=str(row.circuit_id),
+            complex_id=str(row.complex_id),
+            phase_type=str(row.phase_type),
+            archetype=str(row.archetype),
+            **{name: float(getattr(row, name)) for name in SIMILARITY_FEATURES},
+        )
+        for row in raw_features.itertuples(index=False)
+    ]
+    frame = pd.DataFrame(asdict(record) for record in records)
+    if frame.analogue_phase_id.duplicated().any():
+        duplicates = sorted(frame.loc[frame.analogue_phase_id.duplicated(False), "analogue_phase_id"].unique())
+        raise ValueError(f"duplicate observed analogue phase identities: {duplicates}")
+    return frame.sort_values(["observed_year", "circuit_id", "analogue_phase_id"]).reset_index(drop=True)
+
+
 def nearest_analogues(spa_phase: pd.Series, candidates: pd.DataFrame, k: int = 5) -> pd.DataFrame:
     scales = candidates[list(SIMILARITY_FEATURES)].std(ddof=0).replace(0, 1)
     delta = (candidates[list(SIMILARITY_FEATURES)] - spa_phase[list(SIMILARITY_FEATURES)]) / scales
@@ -1445,13 +1551,14 @@ def nearest_analogues(spa_phase: pd.Series, candidates: pd.DataFrame, k: int = 5
     selected = candidates.assign(distance=distance).nsmallest(k, "distance").copy()
     raw = np.exp(-selected.distance.to_numpy(float) ** 2 / 2)
     selected["weight"] = raw / raw.sum()
-    return selected.sort_values(["distance", "phase_id"]).reset_index(drop=True)
+    return selected.sort_values(["distance", "analogue_phase_id"]).reset_index(drop=True)
 ```
 
 ```python
 # calibration/src/spa_calibration/spa_predictor.py
-from dataclasses import dataclass
 from collections import defaultdict
+from dataclasses import dataclass
+import pandas as pd
 
 
 @dataclass(frozen=True)
@@ -1467,10 +1574,23 @@ class TeamLapSample:
 
 @dataclass(frozen=True)
 class FieldBestSample:
-    draw: int
+    profile_id: str
     team_name: str
+    driver_acronym: str
+    draw: int
+    attempt: int
     lap_time_s: float
     sectors_s: tuple[float, float, float]
+
+
+AttemptKey = tuple[str, int, int]
+
+
+@dataclass(frozen=True)
+class AttemptEvidence:
+    sample: TeamLapSample
+    trace: pd.DataFrame
+    timing_table: tuple[dict[str, float], ...]
 
 
 def predict_field_best(
@@ -1493,7 +1613,15 @@ def predict_field_best(
             for profile in expected_profiles
         ]
         winner = min(best_by_profile, key=lambda row: row.lap_time_s)
-        result.append(FieldBestSample(draw, winner.team_name, winner.lap_time_s, winner.sectors_s))
+        result.append(FieldBestSample(
+            winner.profile_id,
+            winner.team_name,
+            winner.driver_acronym,
+            draw,
+            winner.attempt,
+            winner.lap_time_s,
+            winner.sectors_s,
+        ))
     return result
 ```
 
@@ -1502,7 +1630,7 @@ Add correction transfer, iteration, team support, and trace summarization:
 ```python
 import numpy as np
 import pandas as pd
-from .analogues import nearest_analogues
+from .analogues import AnalogueEvidenceRecord, nearest_analogues
 from .hierarchical import posterior_draw_predictions
 from .model_io import CalibrationFit
 from .line_optimizer import LineOptimizationConfig, optimize_line
@@ -1545,18 +1673,22 @@ def build_spa_correction_draws(
     return draws
 
 
-def build_analogue_evidence(spa_features: pd.DataFrame, training_features: pd.DataFrame, k: int = 7) -> dict[str, pd.DataFrame]:
+def build_analogue_evidence(spa_features: pd.DataFrame, analogue_features: pd.DataFrame, k: int = 7) -> dict[str, pd.DataFrame]:
+    required = {field.name for field in dataclasses.fields(AnalogueEvidenceRecord)}
+    missing = required - set(analogue_features.columns)
+    if missing:
+        raise ValueError(f"analogue evidence schema missing columns: {sorted(missing)}")
     evidence: dict[str, pd.DataFrame] = {}
     for row in spa_features.itertuples(index=False):
-        candidates = training_features[
-            (training_features.phase_type == row.phase_type)
-            & (training_features.archetype == row.archetype)
+        candidates = analogue_features[
+            (analogue_features.phase_type == row.phase_type)
+            & (analogue_features.archetype == row.archetype)
         ].copy()
-        candidates["phase_id"] = candidates.pair_id
         evidence[f"{row.complex_id}|{row.phase_type}"] = nearest_analogues(
             pd.Series(row._asdict()), candidates, k=min(k, len(candidates))
         ) if len(candidates) else candidates.assign(distance=[], weight=[])
     return evidence
+
 
 def sector_times(trace: pd.DataFrame) -> tuple[float, float, float]:
     values = []
@@ -1564,6 +1696,13 @@ def sector_times(trace: pd.DataFrame) -> tuple[float, float, float]:
         rows = trace[trace.sector == sector]
         values.append(float(rows.elapsed_s.iloc[-1] - rows.elapsed_s.iloc[0]))
     return tuple(values)
+
+
+def timing_table_rows(trace: pd.DataFrame) -> tuple[dict[str, float], ...]:
+    rows = trace[["progress", "elapsed_s"]].assign(
+        time=lambda frame: frame.elapsed_s / frame.elapsed_s.iloc[-1]
+    )[["progress", "time"]]
+    return tuple(rows.to_dict(orient="records"))
 
 
 def line_change_m(previous: pd.DataFrame, current: pd.DataFrame) -> float:
@@ -1577,9 +1716,10 @@ def predict_spa_team(
     spa_track: pd.DataFrame,
     spa_features: pd.DataFrame,
     parameters: VehicleParameters,
-) -> tuple[list[TeamLapSample], dict[int, pd.DataFrame]]:
+) -> tuple[list[TeamLapSample], dict[AttemptKey, AttemptEvidence]]:
     samples: list[TeamLapSample] = []
-    traces: dict[int, pd.DataFrame] = {}
+    attempt_evidence: dict[AttemptKey, AttemptEvidence] = {}
+    profile_id = f"{team_name}|{driver_acronym}"
     for draw_index, corrections in enumerate(posterior_draws):
         required = {"distance_m", "speed_correction_ms", "phase_time_correction_s", "braking_onset_correction_m", "exit_speed_correction_ms"}
         missing = required - set(corrections.columns)
@@ -1594,12 +1734,22 @@ def predict_spa_team(
                 break
             prior_lap_time = solution.lap_time_s
             line = optimized.line
-        profile_id = f"{team_name}|{driver_acronym}"
         for attempt in range(2):
             attempt_solution = apply_attempt_execution_variation(solution, draw_index=draw_index, attempt=attempt)
-            samples.append(TeamLapSample(profile_id, team_name, driver_acronym, draw_index, attempt, attempt_solution.lap_time_s, sector_times(attempt_solution.trace)))
-        traces[draw_index] = solution.trace
-    return samples, traces
+            trace = attempt_solution.trace.copy()
+            lap_time_s = float(attempt_solution.lap_time_s)
+            if abs(lap_time_s - float(trace.elapsed_s.iloc[-1])) > 1e-6:
+                raise ValueError("attempt lap summary and trace endpoint disagree")
+            sample = TeamLapSample(
+                profile_id, team_name, driver_acronym, draw_index, attempt,
+                lap_time_s, sector_times(trace),
+            )
+            key = (profile_id, draw_index, attempt)
+            if key in attempt_evidence:
+                raise ValueError(f"duplicate attempt evidence key: {key}")
+            samples.append(sample)
+            attempt_evidence[key] = AttemptEvidence(sample, trace, timing_table_rows(trace))
+    return samples, attempt_evidence
 
 
 def team_is_supported(samples: list[TeamLapSample], minimum_draws: int = 200) -> bool:
@@ -1632,14 +1782,31 @@ def browser_trace_rows(trace: pd.DataFrame) -> list[dict[str, object]]:
     return renamed.where(pd.notna(renamed), None).to_dict(orient="records")
 
 
+def _evidence_for_sample(sample: TeamLapSample | FieldBestSample, attempt_evidence: dict[AttemptKey, AttemptEvidence]) -> AttemptEvidence:
+    key = (sample.profile_id, sample.draw, sample.attempt)
+    if key not in attempt_evidence:
+        raise KeyError(f"missing attempt-specific evidence: {key}")
+    evidence = attempt_evidence[key]
+    if (
+        evidence.sample.profile_id != sample.profile_id
+        or evidence.sample.driver_acronym != sample.driver_acronym
+        or evidence.sample.draw != sample.draw
+        or evidence.sample.attempt != sample.attempt
+        or abs(evidence.sample.lap_time_s - sample.lap_time_s) > 1e-9
+        or evidence.sample.sectors_s != sample.sectors_s
+    ):
+        raise ValueError(f"attempt evidence does not match sampled lap summary: {key}")
+    return evidence
+
+
 def summarize_team_prediction(
     team_name: str,
     samples: list[TeamLapSample],
-    traces: dict[int, pd.DataFrame],
+    attempt_evidence: dict[AttemptKey, AttemptEvidence],
 ) -> dict[str, object]:
     lap_times = np.asarray([row.lap_time_s for row in samples], dtype=float)
     representative = samples[int(np.argmin(np.abs(lap_times - np.median(lap_times))))]
-    trace = traces[representative.draw]
+    evidence = _evidence_for_sample(representative, attempt_evidence)
     return {
         "slug": team_name.lower().replace(" ", "-"),
         "teamName": team_name,
@@ -1649,23 +1816,36 @@ def summarize_team_prediction(
             "median": float(np.quantile(lap_times, .5)),
             "upper80": float(np.quantile(lap_times, .9)),
         },
-        "trace": browser_trace_rows(trace),
-        "timingTable": trace[["progress", "elapsed_s"]].assign(time=lambda frame: frame.elapsed_s / frame.elapsed_s.iloc[-1])[["progress", "time"]].to_dict(orient="records"),
+        "trace": browser_trace_rows(evidence.trace),
+        "timingTable": list(evidence.timing_table),
         "disclosure": "Team-level prediction is shown only when posterior support and interval width pass stability checks.",
-        "provenance": {"representativeDraw": representative.draw},
+        "provenance": {
+            "representativeProfileId": representative.profile_id,
+            "representativeDriver": representative.driver_acronym,
+            "representativeDraw": representative.draw,
+            "representativeAttempt": representative.attempt,
+        },
     }
 
 
-def summarize_field_best(field_samples: list[FieldBestSample], traces_by_team_draw: dict[tuple[str, int], pd.DataFrame]) -> dict[str, object]:
+def summarize_field_best(
+    field_samples: list[FieldBestSample],
+    attempt_evidence: dict[AttemptKey, AttemptEvidence],
+) -> dict[str, object]:
     lap_times = np.asarray([row.lap_time_s for row in field_samples], dtype=float)
     median_index = int(np.argmin(np.abs(lap_times - np.median(lap_times))))
     representative = field_samples[median_index]
-    grid = traces_by_team_draw[(representative.team_name, representative.draw)].progress.to_numpy(float)
+    representative_evidence = _evidence_for_sample(representative, attempt_evidence)
+    grid = representative_evidence.trace.progress.to_numpy(float)
     stacked_speed = np.vstack([
-        np.interp(grid, traces_by_team_draw[(row.team_name, row.draw)].progress, traces_by_team_draw[(row.team_name, row.draw)].speed_kph)
+        np.interp(
+            grid,
+            _evidence_for_sample(row, attempt_evidence).trace.progress,
+            _evidence_for_sample(row, attempt_evidence).trace.speed_kph,
+        )
         for row in field_samples
     ])
-    trace = traces_by_team_draw[(representative.team_name, representative.draw)].copy()
+    trace = representative_evidence.trace.copy()
     trace["lower80SpeedKph"] = np.quantile(stacked_speed, .1, axis=0)
     trace["upper80SpeedKph"] = np.quantile(stacked_speed, .9, axis=0)
     return {
@@ -1680,9 +1860,17 @@ def summarize_field_best(field_samples: list[FieldBestSample], traces_by_team_dr
             team: float(np.mean([row.team_name == team for row in field_samples]))
             for team in sorted({row.team_name for row in field_samples})
         },
+        "winnerProbabilitiesByProfile": {
+            profile: float(np.mean([row.profile_id == profile for row in field_samples]))
+            for profile in sorted({row.profile_id for row in field_samples})
+        },
         "trace": browser_trace_rows(trace),
-        "timingTable": trace[["progress", "elapsed_s"]].assign(time=lambda frame: frame.elapsed_s / frame.elapsed_s.iloc[-1])[["progress", "time"]].to_dict(orient="records"),
+        "timingTable": list(representative_evidence.timing_table),
+        "representativeProfileId": representative.profile_id,
         "representativeTeam": representative.team_name,
+        "representativeDriver": representative.driver_acronym,
+        "representativeDraw": representative.draw,
+        "representativeAttempt": representative.attempt,
     }
 
 
@@ -1715,9 +1903,9 @@ def build_corner_predictions(
             "analogues": [{
                 "circuitLabel": row.circuit_id,
                 "complexLabel": row.complex_id,
-                "year": int(row.season),
+                "year": int(row.observed_year),
                 "weight": float(row.weight),
-                "phaseId": row.phase_id,
+                "phaseId": row.analogue_phase_id,
             } for row in analogues.itertuples(index=False)],
             "dominantUncertainty": "Analogue scarcity" if confidence < .55 else "Team and residual variation",
         })
@@ -1756,7 +1944,7 @@ cd calibration
 python -m pytest tests/test_analogues.py tests/test_spa_predictor.py -q
 ```
 
-Expected: `2 passed`.
+Expected: `3 passed`.
 
 - [ ] **Step 5: Commit Spa composition**
 
@@ -1778,13 +1966,22 @@ git commit -m "feat(spa-prediction): compose coherent team lap distributions"
 **Interfaces:**
 - Consumes: validation report, field/team predictions, corner analogues, provenance.
 - Produces: `spa-2026-prediction-v1.json`, `build_prediction_artifact()`, `validate_prediction_artifact()`, and the `spa-calibration validate` command. Model fitting and Spa composition remain explicit Python module calls covered by Tasks 3 and 6 rather than being hidden behind an untested orchestration command.
+- The public validator accepts an optional injected UTC clock; deterministic tests and builders pass one explicitly, while direct callers and the Typer command cannot fail merely because a clock argument was omitted.
 
 - [ ] **Step 1: Write failing artifact gate and checksum tests**
 
 ```python
 # calibration/tests/test_prediction_artifact.py
+from copy import deepcopy
 from datetime import UTC, datetime
+import pytest
 from spa_calibration.artifact import build_prediction_artifact, validate_prediction_artifact
+
+REPORT_NAMES = (
+    "loco", "rollingOrigin", "uncertaintyCalibration", "baselinesAblations",
+    "identifiability", "physicalFeasibility", "eligibility",
+)
+GENERATED_AT = datetime(2026, 7, 14, tzinfo=UTC)
 
 
 def complete_provenance_fixture() -> dict[str, object]:
@@ -1800,37 +1997,90 @@ def complete_provenance_fixture() -> dict[str, object]:
         "hyperparameters": {"draws": 1000},
         "trainingCircuits": ["silverstone"],
         "heldOutCircuits": ["spa-francorchamps"],
-        "validationReportChecksums": {"loco": "e" * 64, "rollingOrigin": "f" * 64},
+        "validationReportChecksums": {name: chr(101 + index) * 64 for index, name in enumerate(REPORT_NAMES)},
         "codeCommit": "1" * 40,
         "scenario": {"id": "spa-2026-dry-qualifying-reference/v1", "attempts": 2},
     }
 
 
+def complete_validation_fixture() -> dict[str, object]:
+    reports = {
+        name: {"passed": True, "checks": {"complete": True}}
+        for name in REPORT_NAMES
+    }
+    return {
+        "release_gates": {
+            "passed": True,
+            "checks": {f"{name}.passed": True for name in REPORT_NAMES},
+        },
+        "reports": reports,
+    }
+
+
+def complete_field_summary_fixture() -> dict[str, object]:
+    return {
+        "lapTimeSeconds": {"lower95": 99, "lower80": 100, "median": 101, "upper80": 102, "upper95": 103},
+        "winnerProbabilities": {"Team": 1.0},
+        "winnerProbabilitiesByProfile": {"Team|DRV": 1.0},
+        "trace": [
+            {"progress": 0.0, "elapsedSeconds": 0.0, "speedKph": 250.0, "throttlePct": 100.0, "brakePct": 0.0, "gear": 7},
+            {"progress": 1.0, "elapsedSeconds": 101.0, "speedKph": 250.0, "throttlePct": 100.0, "brakePct": 0.0, "gear": 7},
+        ],
+        "timingTable": [{"progress": 0.0, "time": 0.0}, {"progress": 1.0, "time": 1.0}],
+        "representativeProfileId": "Team|DRV",
+        "representativeTeam": "Team",
+        "representativeDriver": "DRV",
+        "representativeDraw": 0,
+        "representativeAttempt": 1,
+    }
+
+
 def test_failed_validation_suppresses_field_best() -> None:
+    validation = complete_validation_fixture()
+    validation["release_gates"]["passed"] = False
+    validation["release_gates"]["checks"]["loco.passed"] = False
     artifact = build_prediction_artifact(
-        validation={"release_gates": {"passed": False, "checks": {"lap_time_mae": False}}},
-        field_summary={"lapTimeSeconds": {"lower80": 98.5, "median": 99.0, "upper80": 99.5}, "trace": [], "timingTable": []},
+        validation=validation,
+        field_summary=complete_field_summary_fixture(),
         team_predictions=[],
         corner_predictions=[],
         provenance=complete_provenance_fixture(),
-        generated_at=datetime(2026, 7, 14, tzinfo=UTC),
+        generated_at=GENERATED_AT,
     )
     assert artifact["status"] == "failed-validation"
     assert artifact["fieldBest"] is None
-    assert validate_prediction_artifact(artifact)["checksum"] == artifact["checksum"]
+    assert validate_prediction_artifact(artifact, now=GENERATED_AT)["checksum"] == artifact["checksum"]
 
 
-def test_released_artifact_has_ordered_intervals() -> None:
+def test_released_artifact_fixture_contains_complete_release_evidence() -> None:
     artifact = build_prediction_artifact(
-        validation={"release_gates": {"passed": True, "checks": {"all": True}}},
-        field_summary={"lapTimeSeconds": {"lower80": 100, "median": 101, "upper80": 102}, "trace": [], "timingTable": []},
+        validation=complete_validation_fixture(),
+        field_summary=complete_field_summary_fixture(),
         team_predictions=[],
         corner_predictions=[],
         provenance=complete_provenance_fixture(),
-        generated_at=datetime(2026, 7, 14, tzinfo=UTC),
+        generated_at=GENERATED_AT,
     )
     interval = artifact["fieldBest"]["lapTimeSeconds"]
-    assert interval["lower80"] <= interval["median"] <= interval["upper80"]
+    assert [interval[key] for key in ("lower95", "lower80", "median", "upper80", "upper95")] == sorted(interval.values())
+    assert artifact["fieldBest"]["trace"]
+    assert artifact["fieldBest"]["timingTable"]
+    assert set(artifact["validation"]["reports"]) == set(REPORT_NAMES)
+    assert validate_prediction_artifact(artifact, now=GENERATED_AT)["checksum"] == artifact["checksum"]
+
+
+def test_released_artifact_rejects_report_with_false_passed_flag() -> None:
+    validation = complete_validation_fixture()
+    validation["reports"]["rollingOrigin"]["passed"] = False
+    with pytest.raises(ValueError, match="rollingOrigin"):
+        build_prediction_artifact(
+            validation=validation,
+            field_summary=complete_field_summary_fixture(),
+            team_predictions=[],
+            corner_predictions=[],
+            provenance=complete_provenance_fixture(),
+            generated_at=GENERATED_AT,
+        )
 ```
 
 - [ ] **Step 2: Run and verify RED**
@@ -1847,7 +2097,7 @@ Expected: missing module.
 ```python
 # calibration/src/spa_calibration/artifact.py
 from __future__ import annotations
-from datetime import datetime
+from datetime import UTC, datetime
 from hashlib import sha256
 import numpy as np
 import orjson
@@ -1861,6 +2111,7 @@ REQUIRED_PROVENANCE = {
     "validationReportChecksums", "codeCommit",
 }
 
+
 def validate_release_provenance(provenance: dict[str, object]) -> None:
     missing = REQUIRED_PROVENANCE - provenance.keys()
     if missing:
@@ -1872,17 +2123,20 @@ REQUIRED_REPORTS = {
     "identifiability", "physicalFeasibility", "eligibility",
 }
 
+
 def validate_release_reports(validation: dict[str, object]) -> None:
     reports = validation.get("reports", {})
     failed = sorted(name for name in REQUIRED_REPORTS if reports.get(name, {}).get("passed") is not True)
     if failed:
         raise ValueError(f"missing or failed release reports: {failed}")
 
+
 def validate_ordered_prediction_intervals(artifact: dict[str, object]) -> None:
     interval = artifact["fieldBest"]["lapTimeSeconds"]
     values = [interval[key] for key in ("lower95", "lower80", "median", "upper80", "upper95")]
     if values != sorted(values):
         raise ValueError("prediction intervals are not ordered")
+
 
 def validate_scenario_and_cutoff_freshness(artifact: dict[str, object]) -> None:
     scenario = artifact.get("provenance", {}).get("scenario", {})
@@ -1892,7 +2146,6 @@ def validate_scenario_and_cutoff_freshness(artifact: dict[str, object]) -> None:
     cutoff = datetime.fromisoformat(str(artifact["sourceCutoff"]))
     if generated < cutoff:
         raise ValueError("artifact predates source cutoff")
-
 
 
 def _interval(values: list[float]) -> dict[str, float]:
@@ -1957,28 +2210,43 @@ def build_prediction_artifact(*, validation, field_summary, team_predictions, co
     return validate_prediction_artifact(artifact, now=generated_at)
 
 
-def validate_prediction_artifact(artifact: dict[str, object], *, now: datetime) -> dict[str, object]:
+def validate_prediction_artifact(
+    artifact: dict[str, object], *, now: datetime | None = None,
+) -> dict[str, object]:
+    validation_time = now if now is not None else datetime.now(UTC)
     if artifact.get("schemaVersion") != SCHEMA_VERSION:
         raise ValueError("unsupported prediction schema")
     actual = _checksum(artifact)
     if artifact.get("checksum") != actual:
         raise ValueError("prediction checksum mismatch")
-    validate_prediction_semantics(artifact, now=now)
+    validate_prediction_semantics(artifact, now=validation_time)
     return artifact
 ```
 
 Add to `calibration/src/spa_calibration/cli.py`:
 
 ```python
+from datetime import UTC, datetime
 from pathlib import Path
 import json
+import typer
 from .artifact import validate_prediction_artifact
 
 
 @app.command("validate")
-def validate_artifact(artifact: Path) -> None:
+def validate_artifact(
+    artifact: Path = typer.Option(
+        ...,
+        "--artifact",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+        resolve_path=True,
+    ),
+) -> None:
     payload = json.loads(artifact.read_text())
-    validated = validate_prediction_artifact(payload)
+    validated = validate_prediction_artifact(payload, now=datetime.now(UTC))
     typer.echo(f"valid {validated['schemaVersion']} status={validated['status']}")
 ```
 
@@ -2011,5 +2279,5 @@ The plan is complete when:
 1. LOCO validation writes `calibration/artifacts/validation/loco-results.json`;
 2. a prediction artifact validates against its checksum;
 3. a failed gate produces no `fieldBest` or team predictions;
-4. a released artifact records every fold, baseline comparison, posterior seed, corpus checksum, and uncertainty interval;
+4. a released artifact records every fold, baseline comparison, posterior seed, corpus checksum, complete report conjunction, five-point uncertainty interval, coherent car-driver-attempt identity, and matching trace/timing evidence;
 5. the full test suite succeeds without live API access.
