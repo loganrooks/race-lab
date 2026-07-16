@@ -308,3 +308,24 @@ mutation: append-only
 **Lessons review:** no-new-lesson; the transport friction is already covered by the durable-handoff and exact-readback guardrails.
 
 lessons_reviewed: no-new-lesson
+
+
+## A-016 — 2026-07-16T17:30:00Z — Evaluate 13 post-final review findings
+
+**Evidence status:** remotely-observed starting state; reviewed; local correction in progress; publication and thread actions pending.
+
+**Starting state:** PR #1 was observed at exact head `cfe939e33458eb2b1af257bfc8bfc19476d22c78`; Verify run `29517367046`, job `87685645204`, succeeded for that head. The fresh Codex review produced 13 unresolved P1 threads.
+
+**Work performed:** read the maintenance records and complete fresh review; verified each finding against the exact current plan/control snippets; classified all 13 before editing; traced producer/consumer paths; and began one bounded planning-only correction with focused regression snippets before implementation snippets.
+
+**Files changed:** the three implementation plans, `STATUS.md`, this activity record, `LESSONS.md`, the reconciliation ledger, and the PR #1 closeout plan. `DECISIONS.md` was reviewed and left unchanged because no load-bearing architecture or release contract changed.
+
+**Verification:** pending completion of focused RED/GREEN checks, full project-control tests, direct validator, diff check, canonical verifier, independent fenced-snippet syntax sweep, cross-contract audit, scope assertions, inventory assertions, truncation checks, and suppression-context assertion.
+
+**Publication / remote actions:** none yet. No reaction, reply, resolution, review request, branch update, or merge has been performed in this correction task.
+
+**Result:** all 13 findings are accepted or accepted with modification and have bounded corrections in progress.
+
+**Next action:** complete verification, preserve an external recovery artifact, publish one atomic exact-parent commit, obtain exact-head CI, then complete the 13 reaction/reply/resolution actions and stop.
+
+**Lessons review:** new lesson `L-013` recorded.

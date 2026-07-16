@@ -1263,19 +1263,51 @@ def resample_aligned_trace(trace: pd.DataFrame, track: CanonicalTrack, spacing_m
 ```
 
 ```yaml
-# calibration/config/circuits.yaml
+# calibration/config/geometry-sources.yaml — human-authored inputs
 circuits:
-  melbourne:   {geometry: data/geometry/melbourne.csv, source: TUMFTM, source_license: BSD-3-Clause}
-  shanghai:    {geometry: data/geometry/shanghai.csv, source: TUMFTM, source_license: BSD-3-Clause}
-  suzuka:      {geometry: data/geometry/suzuka.csv, source: TUMFTM, source_license: BSD-3-Clause}
-  miami:       {geometry: data/geometry/miami.csv, source: project-curated, source_license: project}
-  montreal:    {geometry: data/geometry/montreal.csv, source: TUMFTM, source_license: BSD-3-Clause}
-  monaco:      {geometry: data/geometry/monaco.csv, source: TUMFTM, source_license: BSD-3-Clause}
-  barcelona:   {geometry: data/geometry/barcelona.csv, source: TUMFTM, source_license: BSD-3-Clause}
-  spielberg:   {geometry: data/geometry/spielberg.csv, source: TUMFTM, source_license: BSD-3-Clause}
-  silverstone: {geometry: data/geometry/silverstone.csv, source: TUMFTM, source_license: BSD-3-Clause}
-  spa:         {geometry: ../data/reference/spa-reference.json, source: TUMFTM-project-adapter, source_license: BSD-3-Clause}
+  melbourne:   {geometry: data/geometry/melbourne.csv, geometry_format: csv, source: TUMFTM, source_license: BSD-3-Clause}
+  shanghai:    {geometry: data/geometry/shanghai.csv, geometry_format: csv, source: TUMFTM, source_license: BSD-3-Clause}
+  suzuka:      {geometry: data/geometry/suzuka.csv, geometry_format: csv, source: TUMFTM, source_license: BSD-3-Clause}
+  miami:       {geometry: data/geometry/miami.csv, geometry_format: csv, source: project-curated, source_license: project}
+  montreal:    {geometry: data/geometry/montreal.csv, geometry_format: csv, source: TUMFTM, source_license: BSD-3-Clause}
+  monaco:      {geometry: data/geometry/monaco.csv, geometry_format: csv, source: TUMFTM, source_license: BSD-3-Clause}
+  barcelona:   {geometry: data/geometry/barcelona.csv, geometry_format: csv, source: TUMFTM, source_license: BSD-3-Clause}
+  spielberg:   {geometry: data/geometry/spielberg.csv, geometry_format: csv, source: TUMFTM, source_license: BSD-3-Clause}
+  silverstone: {geometry: data/geometry/silverstone.csv, geometry_format: csv, source: TUMFTM, source_license: BSD-3-Clause}
+  spa:         {geometry: ../data/reference/spa-reference.json, geometry_format: spa-reference-json, source: TUMFTM-project-adapter, source_license: BSD-3-Clause}
 ```
+
+Freeze the consumed manifest from measured bytes; `circuits.yaml` is generated and reviewed, never hand-filled with example digests:
+
+```python
+# calibration/scripts/freeze_circuit_manifest.py
+from hashlib import sha256
+from pathlib import Path
+import yaml
+
+
+def freeze_geometry_sources(source_path: Path, output_path: Path) -> None:
+    source = yaml.safe_load(source_path.read_text())
+    frozen = {"circuits": {}}
+    for circuit_id, row in sorted(source["circuits"].items()):
+        geometry_path = (source_path.parent / row["geometry"]).resolve()
+        payload = geometry_path.read_bytes()
+        frozen["circuits"][circuit_id] = {
+            **row,
+            "geometry": row["geometry"],
+            "geometry_format": row["geometry_format"],
+            "checksum": sha256(payload).hexdigest(),
+        }
+    output_path.write_text(yaml.safe_dump(frozen, sort_keys=True))
+```
+
+```bash
+python calibration/scripts/freeze_circuit_manifest.py \
+  --source calibration/config/geometry-sources.yaml \
+  --output calibration/config/circuits.yaml
+```
+
+`GeometrySource.from_manifest()` consumes only generated `circuits.yaml` rows containing `geometry`, `geometry_format`, and a measured lowercase 64-character SHA-256 `checksum`.
 
 - [ ] **Step 4: Run tests and verify GREEN**
 
@@ -1375,6 +1407,18 @@ class ComplexSpec:
     apex_hint_m: float
 
 
+def test_duplicate_phase_anchors_are_normalized_without_overlap(flat_trace, simple_complex) -> None:
+    phases = detect_complex_phases(flat_trace, simple_complex)
+    assert phases
+    assert all(left.end_distance_m <= right.start_distance_m for left, right in zip(phases, phases[1:]))
+    assert all(phase.end_distance_m > phase.start_distance_m for phase in phases)
+
+
+def test_unsupported_zero_length_phase_is_omitted(flat_trace, simple_complex) -> None:
+    phases = detect_complex_phases(flat_trace.iloc[:2], simple_complex)
+    assert all(phase.end_distance_m > phase.start_distance_m for phase in phases)
+
+
 def detect_complex_phases(trace: pd.DataFrame, spec: ComplexSpec, lap_slug: str = "fixture", circuit_id: str = "fixture") -> list[PhaseRecord]:
     window = trace[(trace.distance_m >= spec.start_distance_m) & (trace.distance_m <= spec.end_distance_m)].copy()
     distance = window.distance_m.to_numpy(float)
@@ -1415,13 +1459,18 @@ def detect_complex_phases(trace: pd.DataFrame, spec: ComplexSpec, lap_slug: str 
         ("full-power", min(full_power, len(window) - 2)),
     ])
     ordered: list[tuple[str, int]] = []
-    last = 0
     for name, index in anchors:
-        last = max(last, int(index))
-        ordered.append((name, last))
+        normalized = int(np.clip(index, 0, len(window) - 1))
+        if ordered and normalized <= ordered[-1][1]:
+            # Duplicate/collapsed anchors do not define a supported phase boundary.
+            continue
+        ordered.append((name, normalized))
     records: list[PhaseRecord] = []
-    for phase_index, ((name, start_index), (_, next_index)) in enumerate(zip(ordered, ordered[1:] + [("end", len(window) - 1)])):
-        end_index = max(start_index + 1, next_index)
+    final_index = len(window) - 1
+    for phase_index, ((name, start_index), (_, next_index)) in enumerate(zip(ordered, ordered[1:] + [("end", final_index)])):
+        end_index = min(next_index, final_index)
+        if end_index <= start_index:
+            continue
         records.append(PhaseRecord(
             lap_slug=lap_slug,
             circuit_id=circuit_id,
@@ -1886,7 +1935,9 @@ def test_fixture_bundle_builds_2025_2026_pairs_and_2024_controls(tmp_path: Path)
     manifest = build_corpus_from_fixture_bundle(
         Path("data/fixtures/pipeline-openf1-bundle.json"),
         circuits_config=Path("config/circuits.yaml"),
-        eligibility_path=Path("manifests/circuit-year-eligibility.json"),
+        eligibility_path=Path("manifests/source-eligibility.json"),
+        circuit_year_eligibility_path=Path("manifests/circuit-year-eligibility.json"),
+        lap_selection_path=Path("manifests/lap-selection.json"),
         output=tmp_path,
         generated_at=datetime(2026, 7, 14, tzinfo=UTC),
     )
@@ -2137,30 +2188,50 @@ def lap_record_row(session_bundle, lap_bundle, driver, quality, lap_slug):
     }
 
 
-def select_candidate_laps(laps: list[dict], session_name: str, maximum_per_team: int = 2) -> list[dict]:
+def profile_key(row: dict) -> tuple[str, str]:
+    return (
+        str(row.get("team_name") or "Unknown team"),
+        str(row.get("driver_acronym") or row.get("driver_number")),
+    )
+
+
+def select_candidate_laps(laps: list[dict], session_name: str, maximum_per_profile: int = 2) -> list[dict]:
     preferred = ["SQ3", "SQ2", "SQ1"] if session_name == "Sprint Qualifying" else ["Q3", "Q2", "Q1"]
     valid = [row for row in laps if row.get("date_start") and row.get("lap_duration") and not row.get("is_pit_out_lap")]
     selected: list[dict] = []
-    team_counts: dict[str, int] = {}
-    for segment_index, segment in enumerate(preferred):
-        candidates = sorted(
-            (row for row in valid if row.get("segment") == segment),
-            key=lambda row: float(row["lap_duration"]),
-        )
-        for row in candidates:
-            team = str(row.get("team_name") or row.get("driver_number"))
-            if team_counts.get(team, 0) >= maximum_per_team:
-                continue
-            enriched = {
-                **row,
-                "selection_fallback": segment_index > 0,
-                "fallback_reason": None if segment_index == 0 else f"no eligible {preferred[0]} lap for profile",
-            }
-            selected.append(enriched)
-            team_counts[team] = team_counts.get(team, 0) + 1
-        if len(selected) >= 12:
-            break
-    return selected[:12]
+    profile_counts: dict[tuple[str, str], int] = {}
+    profiles = sorted({profile_key(row) for row in valid})
+    for profile in profiles:
+        profile_rows = [row for row in valid if profile_key(row) == profile]
+        for segment_index, segment in enumerate(preferred):
+            candidates = sorted(
+                (row for row in profile_rows if row.get("segment") == segment),
+                key=lambda row: float(row["lap_duration"]),
+            )
+            for row in candidates:
+                if profile_counts.get(profile, 0) >= maximum_per_profile:
+                    break
+                selected.append({
+                    **row,
+                    "profile_id": "|".join(profile),
+                    "selection_fallback": segment_index > 0,
+                    "fallback_reason": None if segment_index == 0 else f"no eligible {preferred[0]} lap for profile",
+                })
+                profile_counts[profile] = profile_counts.get(profile, 0) + 1
+            if profile_counts.get(profile, 0):
+                break
+    return sorted(selected, key=lambda row: float(row["lap_duration"]))[:12]
+
+
+def test_candidate_lap_limit_preserves_both_team_profiles() -> None:
+    laps = [
+        {"team_name": "Example", "driver_acronym": "AAA", "driver_number": 1, "segment": "Q3", "lap_duration": 90.0, "date_start": "2026-01-01T00:00:00Z"},
+        {"team_name": "Example", "driver_acronym": "AAA", "driver_number": 1, "segment": "Q3", "lap_duration": 90.1, "date_start": "2026-01-01T00:02:00Z"},
+        {"team_name": "Example", "driver_acronym": "BBB", "driver_number": 2, "segment": "Q3", "lap_duration": 91.0, "date_start": "2026-01-01T00:04:00Z"},
+        {"team_name": "Example", "driver_acronym": "BBB", "driver_number": 2, "segment": "Q3", "lap_duration": 91.1, "date_start": "2026-01-01T00:06:00Z"},
+    ]
+    selected = select_candidate_laps(laps, "Qualifying", maximum_per_profile=2)
+    assert {row["profile_id"] for row in selected} == {"Example|AAA", "Example|BBB"}
 
 
 def build_corpus_from_fixture_bundle(

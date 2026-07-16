@@ -165,6 +165,16 @@ test('released artifact requires playable field-best trace and timing arrays', (
   assert.throws(() => validate(releasedFixture({ fieldBest: { ...released.fieldBest, timingTable: [] } })), /timing/i);
 });
 
+test('released artifact rejects source cutoff after generation', () => {
+  assert.throws(() => validate(releasedFixture({ sourceCutoff: '2026-07-15T00:00:00Z' })), /chronology/i);
+});
+
+test('released artifact rejects failed nested release checks', () => {
+  const artifact = releasedFixture();
+  artifact.validation.reports.identifiability.checks.complete = false;
+  assert.throws(() => validate(artifact), /nested check/i);
+});
+
 test('non-released artifacts cannot expose field best', () => {
   assert.throws(() => validate({ ...released, status: 'failed-validation' }), /fieldBest/i);
   assert.equal(pendingCalibrationArtifact('missing').fieldBest, null);
@@ -249,8 +259,16 @@ function validatePredictionSource(source, label, intervalKeys) {
 }
 
 function validateRequiredReleaseReports(validation) {
+  const reports = validation?.reports;
+  if (!reports || new Set(Object.keys(reports)).size !== REQUIRED_REPORTS.length || Object.keys(reports).some((name) => !REQUIRED_REPORTS.includes(name))) {
+    throw new TypeError('Release report set must exactly match the canonical required reports');
+  }
   for (const name of REQUIRED_REPORTS) {
-    if (validation?.reports?.[name]?.passed !== true) throw new TypeError(`Missing or failed release report: ${name}`);
+    const report = reports[name];
+    if (report?.passed !== true) throw new TypeError(`Missing or failed release report: ${name}`);
+    if (!report.checks || !Object.keys(report.checks).length || Object.values(report.checks).some((value) => value !== true)) {
+      throw new TypeError(`Failed nested check in release report: ${name}`);
+    }
   }
 }
 
@@ -310,8 +328,10 @@ export function validateCalibrationArtifact(value, { now = new Date(), maximumAg
     validateScenario(value.provenance?.scenario);
     const generated = Date.parse(value.generatedAt);
     const sourceCutoff = Date.parse(value.sourceCutoff);
-    if (!Number.isFinite(generated) || !Number.isFinite(sourceCutoff)) throw new TypeError('Released artifact requires valid timestamps');
-    if (now.getTime() - generated > maximumAgeHours * 3600_000) throw new TypeError('Released artifact is stale');
+    const validationNow = now.getTime();
+    if (!Number.isFinite(generated) || !Number.isFinite(sourceCutoff) || !Number.isFinite(validationNow)) throw new TypeError('Released artifact requires valid timestamps');
+    if (!(sourceCutoff <= generated && generated <= validationNow)) throw new TypeError('Released artifact chronology is invalid');
+    if (validationNow - generated > maximumAgeHours * 3600_000) throw new TypeError('Released artifact is stale');
     validatePredictionSource(value.fieldBest, 'fieldBest', FIELD_BEST_INTERVAL_KEYS);
     for (const [index, team] of value.teams.entries()) {
       validatePredictionSource(team, `teams[${index}]`, TEAM_INTERVAL_KEYS);

@@ -177,3 +177,15 @@ Each completed row records a technical disposition and a bounded correction in t
 ## Completion definition
 
 Closeout is complete only when all 22 rows are published and individually accounted for, exact-head CI succeeds, one final review has no valid blocker, PR #1 is merged, the planning-only boundary is preserved, and no suppressed prediction value is released.
+
+
+### PR-03A — Reconcile post-final review blockers
+
+- [ ] Verify and classify `POSTFINAL-01` through `POSTFINAL-13` against exact head `cfe939e33458eb2b1af257bfc8bfc19476d22c78`.
+- [ ] Correct only the three implementation plans and required living records.
+- [ ] Run focused regression checks, complete verification, fenced-snippet syntax sweep, and cross-contract audit.
+- [ ] Preserve an external recovery artifact.
+- [ ] Publish one atomic commit parented by the exact starting head and obtain exact-head Verify success.
+- [ ] Apply 13 positive reactions, 13 inline replies, and 13 thread resolutions.
+- [ ] Confirm zero unresolved threads.
+- [ ] Do not merge and do not request another review in this task.

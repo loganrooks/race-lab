@@ -172,3 +172,16 @@ initiative: spa-2026-calibration
 **Enforcement:** branch inventory and cleanup before further publication.
 
 **Evidence of effectiveness:** eleven stale automation/worker refs were removed after the three worker tips were preserved in archive commit `b105df73de22059161959673d110e31cb2177daa`.
+
+
+## L-013 — Cross-snippet producer/consumer parity requires executable horizontal contracts
+
+**Friction:** repeated review passes corrected one side of interfaces while stale consumers, fixtures, defaults, or manifest examples remained elsewhere in the planning package. Syntax and project-control checks stayed green because each snippet was individually parseable.
+
+**Systemic cause:** verification emphasized local snippet validity and record consistency rather than executable parity across every producer, adapter, consumer, fixture, validator, and CLI/browser boundary sharing an interface.
+
+**Consequence:** nullable outcomes, profile identity, attempt evidence, report checks, chronology, geometry provenance, and manifest arguments remained inconsistent and blocked safe merge after a nominal final review.
+
+**Enforceable guardrail:** every review correction must name its producer/consumer chain and add a focused cross-contract assertion or fixture that fails when either side drifts. The pre-publication audit must enumerate every touched interface and verify all producers and consumers together.
+
+**Check:** the `POSTFINAL-01` through `POSTFINAL-13` reconciliation ledger records each chain; the independent cross-contract audit and fenced-snippet sweep are mandatory publication gates.

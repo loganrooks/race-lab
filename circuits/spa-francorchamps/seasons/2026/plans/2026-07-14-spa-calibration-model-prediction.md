@@ -314,6 +314,30 @@ def test_unknown_category_maps_to_explicit_unknown_index() -> None:
     assert encoded.team_index.tolist() == [0]
 ```
 
+```python
+# calibration/tests/test_hierarchical_nullable_outcomes.py
+import numpy as np
+import pandas as pd
+import pytest
+from spa_calibration.hierarchical import BRAKING_OUTCOME, outcome_frame
+
+
+def test_unobserved_braking_row_cannot_enter_model_target() -> None:
+    frame = pd.DataFrame({
+        BRAKING_OUTCOME: [1.0, None, 3.0, 4.0],
+        f"{BRAKING_OUTCOME}_observed": [True, False, True, True],
+    })
+    filtered = outcome_frame(frame, BRAKING_OUTCOME)
+    assert filtered[BRAKING_OUTCOME].tolist() == [1.0, 3.0, 4.0]
+    assert np.isfinite(filtered[BRAKING_OUTCOME].to_numpy(float)).all()
+
+
+def test_braking_outcome_fails_closed_with_insufficient_support() -> None:
+    frame = pd.DataFrame({BRAKING_OUTCOME: [1.0, None], f"{BRAKING_OUTCOME}_observed": [True, False]})
+    with pytest.raises(ValueError, match="insufficient observed support"):
+        outcome_frame(frame, BRAKING_OUTCOME)
+```
+
 - [ ] **Step 2: Run and verify RED**
 
 ```bash
@@ -504,9 +528,29 @@ class FitConfig:
     target_accept: float = .92
 
 
+BRAKING_OUTCOME = "delta_braking_onset_from_complex_start_m"
+
+
+def outcome_frame(frame: pd.DataFrame, outcome: str, minimum_support: int = 3) -> pd.DataFrame:
+    filtered = frame
+    if outcome == BRAKING_OUTCOME:
+        observed_column = f"{outcome}_observed"
+        if observed_column not in frame:
+            raise ValueError(f"missing observed mask for {outcome}")
+        filtered = frame[frame[observed_column].eq(True) & frame[outcome].notna()].copy()
+    else:
+        filtered = frame[frame[outcome].notna()].copy()
+    if len(filtered) < minimum_support:
+        raise ValueError(f"insufficient observed support for {outcome}: {len(filtered)}")
+    return filtered
+
+
 def fit_outcome_model(frame: pd.DataFrame, outcome: str, encoder: FeatureEncoder, config: FitConfig) -> az.InferenceData:
+    frame = outcome_frame(frame, outcome)
     encoded = encoder.transform(frame)
     y = frame[outcome].to_numpy(float)
+    if not np.isfinite(y).all():
+        raise ValueError(f"non-finite target for {outcome}")
     outcome_mean = float(y.mean())
     outcome_scale = max(float(y.std(ddof=0)), 1e-6)
     y_standardized = (y - outcome_mean) / outcome_scale
@@ -635,6 +679,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import arviz as az
 import orjson
+import re
 from .design_matrix import FeatureEncoder
 
 
@@ -1614,7 +1659,7 @@ def build_analogue_evidence(spa_features: pd.DataFrame, training_features: pd.Da
             (training_features.phase_type == row.phase_type)
             & (training_features.archetype == row.archetype)
         ].copy()
-        candidates["phase_id"] = candidates.pair_id
+        candidates["phase_id"] = candidates.analogue_phase_id
         evidence[f"{row.complex_id}|{row.phase_type}"] = nearest_analogues(
             pd.Series(row._asdict()), candidates, k=min(k, len(candidates))
         ) if len(candidates) else candidates.assign(distance=[], weight=[])
@@ -1728,12 +1773,20 @@ def summarize_field_best(field_samples: list[FieldBestSample], evidence: dict[tu
     lap_times = np.asarray([row.lap_time_s for row in field_samples], dtype=float)
     median_index = int(np.argmin(np.abs(lap_times - np.median(lap_times))))
     representative = field_samples[median_index]
-    grid = traces_by_team_draw[(representative.team_name, representative.draw)].progress.to_numpy(float)
+    representative_key = (representative.profile_id, representative.draw, representative.attempt)
+    representative_evidence = evidence[representative_key]
+    if representative_evidence.lap_time_s != representative.lap_time_s or representative_evidence.sectors_s != representative.sectors_s:
+        raise ValueError("field-best sample and attempt evidence disagree")
+    grid = representative_evidence.trace.progress.to_numpy(float)
     stacked_speed = np.vstack([
-        np.interp(grid, traces_by_team_draw[(row.team_name, row.draw)].progress, traces_by_team_draw[(row.team_name, row.draw)].speed_kph)
+        np.interp(
+            grid,
+            evidence[(row.profile_id, row.draw, row.attempt)].trace.progress,
+            evidence[(row.profile_id, row.draw, row.attempt)].trace.speed_kph,
+        )
         for row in field_samples
     ])
-    trace = traces_by_team_draw[(representative.team_name, representative.draw)].copy()
+    trace = representative_evidence.trace.copy()
     trace["lower80SpeedKph"] = np.quantile(stacked_speed, .1, axis=0)
     trace["upper80SpeedKph"] = np.quantile(stacked_speed, .9, axis=0)
     return {
@@ -1750,8 +1803,26 @@ def summarize_field_best(field_samples: list[FieldBestSample], evidence: dict[tu
         },
         "trace": browser_trace_rows(trace),
         "timingTable": trace[["progress", "elapsed_s"]].assign(time=lambda frame: frame.elapsed_s / frame.elapsed_s.iloc[-1])[["progress", "time"]].to_dict(orient="records"),
+        "representativeProfileId": representative.profile_id,
         "representativeTeam": representative.team_name,
+        "representativeDriver": representative.driver_acronym,
+        "representativeDraw": representative.draw,
+        "representativeAttempt": representative.attempt,
+        "sectorsSeconds": list(representative_evidence.sectors_s),
     }
+
+
+def test_field_best_uses_exact_profile_draw_attempt_evidence() -> None:
+    samples, evidence = two_driver_two_attempt_fixture_same_team()
+    summary = summarize_field_best(samples, evidence)
+    key = (summary["representativeProfileId"], summary["representativeDraw"], summary["representativeAttempt"])
+    selected = evidence[key]
+    assert summary["lapTimeSeconds"]["median"] == selected.lap_time_s
+    assert summary["sectorsSeconds"] == list(selected.sectors_s)
+    assert summary["trace"] == browser_trace_rows(selected.trace.assign(
+        lower80SpeedKph=selected.trace.speed_kph,
+        upper80SpeedKph=selected.trace.speed_kph,
+    ))
 
 
 def build_corner_predictions(
@@ -1852,6 +1923,7 @@ git commit -m "feat(spa-prediction): compose coherent team lap distributions"
 ```python
 # calibration/tests/test_prediction_artifact.py
 from datetime import UTC, datetime
+import pytest
 from spa_calibration.artifact import build_prediction_artifact, validate_prediction_artifact
 
 
@@ -1868,10 +1940,29 @@ def complete_provenance_fixture() -> dict[str, object]:
         "hyperparameters": {"draws": 1000},
         "trainingCircuits": ["silverstone"],
         "heldOutCircuits": ["spa-francorchamps"],
-        "validationReportChecksums": {"loco": "e" * 64, "rollingOrigin": "f" * 64},
+        "validationReportChecksums": {
+            "loco": "e" * 64,
+            "rollingOrigin": "f" * 64,
+            "uncertaintyCalibration": "1" * 64,
+            "baselinesAblations": "2" * 64,
+            "identifiability": "3" * 64,
+            "physicalFeasibility": "4" * 64,
+            "eligibility": "5" * 64,
+        },
         "codeCommit": "1" * 40,
         "scenario": {"id": "spa-2026-dry-qualifying-reference/v1", "attempts": 2},
     }
+
+
+def complete_validation_fixture() -> dict[str, object]:
+    reports = {
+        name: {"passed": True, "checks": {"complete": True}}
+        for name in {
+            "loco", "rollingOrigin", "uncertaintyCalibration", "baselinesAblations",
+            "identifiability", "physicalFeasibility", "eligibility",
+        }
+    }
+    return {"release_gates": {"passed": True, "checks": {"all": True}}, "reports": reports}
 
 
 def test_failed_validation_suppresses_field_best() -> None:
@@ -1895,7 +1986,7 @@ def test_failed_validation_suppresses_field_best() -> None:
 
 def test_released_artifact_has_ordered_intervals() -> None:
     artifact = build_prediction_artifact(
-        validation={"release_gates": {"passed": True, "checks": {"all": True}}},
+        validation=complete_validation_fixture(),
         field_summary={
             "lapTimeSeconds": {"lower95": 99, "lower80": 100, "median": 101, "upper80": 102, "upper95": 103},
             "trace": valid_trace(), "timingTable": valid_timing_table(),
@@ -1908,7 +1999,28 @@ def test_released_artifact_has_ordered_intervals() -> None:
         generated_at=datetime(2026, 7, 14, tzinfo=UTC),
     )
     interval = artifact["fieldBest"]["lapTimeSeconds"]
-    assert interval["lower80"] <= interval["median"] <= interval["upper80"]
+    assert interval["lower95"] <= interval["lower80"] <= interval["median"] <= interval["upper80"] <= interval["upper95"]
+
+
+def test_nested_failed_report_check_blocks_release() -> None:
+    validation = complete_validation_fixture()
+    validation["reports"]["identifiability"]["checks"]["complete"] = False
+    with pytest.raises(ValueError, match="nested check"):
+        build_prediction_artifact(
+            validation=validation, field_summary=complete_field_summary_fixture(), team_predictions=[],
+            corner_predictions=[], provenance=complete_provenance_fixture(), generated_at=datetime(2026, 7, 14, tzinfo=UTC),
+        )
+
+
+def test_provenance_checksums_require_exact_report_coverage() -> None:
+    provenance = complete_provenance_fixture()
+    provenance["trainingManifestChecksum"] = "not-a-sha"
+    with pytest.raises(ValueError, match="SHA-256"):
+        validate_release_provenance(provenance)
+    provenance = complete_provenance_fixture()
+    provenance["validationReportChecksums"].pop("eligibility")
+    with pytest.raises(ValueError, match="report checksum"):
+        validate_release_provenance(provenance)
 ```
 
 - [ ] **Step 2: Run and verify RED**
@@ -1925,7 +2037,7 @@ Expected: missing module.
 ```python
 # calibration/src/spa_calibration/artifact.py
 from __future__ import annotations
-from datetime import datetime
+from datetime import UTC, datetime
 from hashlib import sha256
 import numpy as np
 import orjson
@@ -1939,10 +2051,26 @@ REQUIRED_PROVENANCE = {
     "validationReportChecksums", "codeCommit",
 }
 
+SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+CHECKSUM_FIELDS = {
+    "trainingManifestChecksum", "sourceEligibilityChecksum",
+    "circuitYearEligibilityChecksum", "scenarioChecksum",
+}
+
+
 def validate_release_provenance(provenance: dict[str, object]) -> None:
     missing = REQUIRED_PROVENANCE - provenance.keys()
     if missing:
         raise ValueError(f"released artifact missing provenance: {sorted(missing)}")
+    for field in CHECKSUM_FIELDS:
+        if not SHA256_PATTERN.fullmatch(str(provenance.get(field, ""))):
+            raise ValueError(f"{field} must be a lowercase 64-character SHA-256")
+    report_checksums = provenance.get("validationReportChecksums")
+    if not isinstance(report_checksums, dict) or set(report_checksums) != REQUIRED_REPORTS:
+        raise ValueError("validation report checksum coverage must equal REQUIRED_REPORTS")
+    for name, digest in report_checksums.items():
+        if not SHA256_PATTERN.fullmatch(str(digest)):
+            raise ValueError(f"report checksum {name} must be a lowercase 64-character SHA-256")
 
 
 REQUIRED_REPORTS = {
@@ -1952,9 +2080,14 @@ REQUIRED_REPORTS = {
 
 def validate_release_reports(validation: dict[str, object]) -> None:
     reports = validation.get("reports", {})
-    failed = sorted(name for name in REQUIRED_REPORTS if reports.get(name, {}).get("passed") is not True)
-    if failed:
-        raise ValueError(f"missing or failed release reports: {failed}")
+    if not isinstance(reports, dict) or set(reports) != REQUIRED_REPORTS:
+        raise ValueError("release report set must equal REQUIRED_REPORTS")
+    for name, report in reports.items():
+        if report.get("passed") is not True:
+            raise ValueError(f"release report failed: {name}")
+        checks = report.get("checks")
+        if not isinstance(checks, dict) or not checks or any(value is not True for value in checks.values()):
+            raise ValueError(f"release report nested check failed: {name}")
 
 def validate_ordered_prediction_intervals(artifact: dict[str, object]) -> None:
     interval = artifact["fieldBest"]["lapTimeSeconds"]
