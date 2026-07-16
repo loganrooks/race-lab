@@ -329,3 +329,26 @@ lessons_reviewed: no-new-lesson
 **Next action:** complete verification, preserve an external recovery artifact, publish one atomic exact-parent commit, obtain exact-head CI, then complete the 13 reaction/reply/resolution actions and stop.
 
 **Lessons review:** new lesson `L-013` recorded.
+
+
+## A-017 — 2026-07-16T19:52:00Z — Complete POSTFINAL review actions and prepare administrative synchronization
+
+**Evidence status:** material correction pushed and CI-confirmed; 13/13 reactions, replies, and resolutions remotely observed; zero unresolved threads; administrative synchronization locally in progress.
+
+**Starting state:** PR #1 was open, unmerged, and mergeable at material correction head `5b504c2ccbe2fe8b077db3b2bf22cfa9fde9423c`. Exact-head `Verify` run `29526764111`, job `87717006676`, had succeeded. The worker-evidence archive matched `b105df73de22059161959673d110e31cb2177daa`, and the only unresolved threads were `POSTFINAL-01` through `POSTFINAL-13`.
+
+**Work performed:** verified the numeric REST comment identifiers through a temporary archive executor, restored the archive checkpoint, then for each POSTFINAL finding added one authenticated `+1`, posted the specified technical inline reply, and resolved the exact GraphQL thread. The complete thread inventory was read back after the sweep. The four authorized living records were then synchronized without changing technical plans, tests, scripts, decisions, lessons, or production files.
+
+**Files changed:** `project/STATUS.md`, this `ACTIVITY.md`, `reviews/2026-07-15-plan-reconciliation.md`, and `plans/2026-07-15-pr1-closeout-plan.md` only.
+
+**Verification:** material correction head `5b504c2ccbe2fe8b077db3b2bf22cfa9fde9423c` is remotely observed and exact-head CI-confirmed by run `29526764111`, job `87717006676`. Review actions are remotely observed at 13/13 reactions, 13/13 inline replies, and 13/13 resolutions; the complete readback contains zero unresolved threads and no new finding. Verification of this administrative four-file unit is the next gate.
+
+**Publication / remote actions:** the material correction is pushed and CI-confirmed. The administrative action-sync unit has not yet been published and therefore has no claimed remote SHA in this entry. Exactly one final independent re-review remains pending after that record-only commit receives exact-head CI. No merge was attempted.
+
+**Result:** the POSTFINAL action sweep is complete and externally verified. The remaining bounded work in this task is one administrative publication, exact-head CI, and one final review request.
+
+**Next action:** verify and publish the exact four-file record-only unit parented to `5b504c2ccbe2fe8b077db3b2bf22cfa9fde9423c`, obtain exact-head `Verify`, post exactly one final `@codex review`, and stop without merging.
+
+**Lessons review:** no-new-lesson; `L-013` already captures the cross-snippet producer/consumer failure mode, and this action-only synchronization introduced no new reusable technical lesson.
+
+lessons_reviewed: no-new-lesson

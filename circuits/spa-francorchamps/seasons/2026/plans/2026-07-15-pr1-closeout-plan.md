@@ -181,11 +181,21 @@ Closeout is complete only when all 22 rows are published and individually accoun
 
 ### PR-03A — Reconcile post-final review blockers
 
-- [ ] Verify and classify `POSTFINAL-01` through `POSTFINAL-13` against exact head `cfe939e33458eb2b1af257bfc8bfc19476d22c78`.
-- [ ] Correct only the three implementation plans and required living records.
-- [ ] Run focused regression checks, complete verification, fenced-snippet syntax sweep, and cross-contract audit.
-- [ ] Preserve an external recovery artifact.
-- [ ] Publish one atomic commit parented by the exact starting head and obtain exact-head Verify success.
-- [ ] Apply 13 positive reactions, 13 inline replies, and 13 thread resolutions.
-- [ ] Confirm zero unresolved threads.
-- [ ] Do not merge and do not request another review in this task.
+- [x] Verify and classify `POSTFINAL-01` through `POSTFINAL-13` against exact head `cfe939e33458eb2b1af257bfc8bfc19476d22c78`.
+- [x] Correct only the three implementation plans and required living records.
+- [x] Run focused regression checks, complete verification, fenced-snippet syntax sweep, and cross-contract audit.
+- [x] Preserve an external recovery artifact.
+- [x] Publish one atomic commit parented by the exact starting head and obtain exact-head Verify success (`5b504c2ccbe2fe8b077db3b2bf22cfa9fde9423c`; run `29526764111`, job `87717006676`).
+- [x] Apply 13 positive reactions, 13 inline replies, and 13 thread resolutions.
+- [x] Confirm zero unresolved threads.
+- [x] Do not merge and do not request another review during the correction/action task.
+
+
+### PR-03B — Synchronize POSTFINAL actions and request final re-review
+
+- [x] Read back 13 authenticated positive reactions, exact inline replies, resolved POSTFINAL threads, and zero unresolved threads.
+- [ ] Publish exactly four administrative record files, parented to material correction head `5b504c2ccbe2fe8b077db3b2bf22cfa9fde9423c`.
+- [ ] Read back the administrative PR head and exact four-file scope.
+- [ ] Require successful exact-head `Verify` for the administrative head.
+- [ ] Post exactly one final independent `@codex review` request and record its comment ID.
+- [ ] Stop without merging; merge remains blocked pending evaluation of the fresh review.
