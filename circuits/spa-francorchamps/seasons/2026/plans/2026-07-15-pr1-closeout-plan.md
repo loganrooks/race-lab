@@ -199,3 +199,12 @@ Closeout is complete only when all 22 rows are published and individually accoun
 - [ ] Require successful exact-head `Verify` for the administrative head.
 - [ ] Post exactly one final independent `@codex review` request and record its comment ID.
 - [ ] Stop without merging; merge remains blocked pending evaluation of the fresh review.
+
+
+### PR-03C — Complete 15-finding final rereview action sweep
+
+- [ ] Classify and correct `REREVIEW-01` through `REREVIEW-15` against exact parent `bb67dbdbb6e4064cffd23c777cc409cffbfe6d73`.
+- [ ] Publish one coherent fast-forward correction only after local verification and exact candidate parity.
+- [ ] Require exact-head Verify success before any review mutation.
+- [ ] Apply and read back 15/15 authenticated `+1` reactions, 15/15 inline technical replies, and 15/15 resolutions.
+- [ ] Require unresolved-thread count `0`; do not request another review and do not merge.

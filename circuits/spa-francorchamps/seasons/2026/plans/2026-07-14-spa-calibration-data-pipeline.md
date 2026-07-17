@@ -484,6 +484,8 @@ async def test_client_caches_exact_query_and_payload(tmp_path) -> None:
         "meeting_key": 1300,
         "session_key": 9901,
         "session_name": "Qualifying",
+        "meeting_name": "British Grand Prix",
+        "circuit_short_name": "Silverstone",
         "date_start": "2026-07-04T14:00:00+00:00"
     }]))
     client = OpenF1Client(cache=ContentAddressedCache(tmp_path), retrieved_at=datetime(2026, 7, 14, tzinfo=UTC))
@@ -1281,6 +1283,7 @@ Freeze the consumed manifest from measured bytes; `circuits.yaml` is generated a
 
 ```python
 # calibration/scripts/freeze_circuit_manifest.py
+import argparse
 from hashlib import sha256
 from pathlib import Path
 import yaml
@@ -1299,6 +1302,18 @@ def freeze_geometry_sources(source_path: Path, output_path: Path) -> None:
             "checksum": sha256(payload).hexdigest(),
         }
     output_path.write_text(yaml.safe_dump(frozen, sort_keys=True))
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Freeze measured circuit-geometry digests")
+    parser.add_argument("--source", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    args = parser.parse_args()
+    freeze_geometry_sources(args.source, args.output)
+
+
+if __name__ == "__main__":
+    main()
 ```
 
 ```bash

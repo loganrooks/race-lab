@@ -1285,14 +1285,23 @@ from .baselines import circuit_folds
 def score_fold(test: pd.DataFrame, prediction: pd.DataFrame, baseline: pd.DataFrame, held_out: str) -> dict[str, object]:
     joined = test[[
         "pair_id", "lap_slug", "archetype", "sector", "delta_phase_time_s", "delta_minimum_speed_kph",
-        "delta_braking_onset_from_complex_start_m"
+        "delta_braking_onset_from_complex_start_m",
+        "delta_braking_onset_from_complex_start_m_observed"
     ]].merge(prediction, on="pair_id", validate="one_to_one")
     baseline_joined = test[["pair_id", "lap_slug", "delta_phase_time_s"]].merge(
         baseline[["pair_id", "predicted_delta_phase_time_s"]], on="pair_id", validate="one_to_one"
     )
     phase_error = joined.predicted_delta_phase_time_s - joined.delta_phase_time_s
     speed_error = joined.predicted_delta_minimum_speed_kph - joined.delta_minimum_speed_kph
-    brake_error = joined.predicted_delta_braking_onset_from_complex_start_m - joined.delta_braking_onset_from_complex_start_m
+    brake_mask = (
+        joined.delta_braking_onset_from_complex_start_m_observed.astype(bool)
+        & joined.delta_braking_onset_from_complex_start_m.notna()
+        & joined.predicted_delta_braking_onset_from_complex_start_m.notna()
+    )
+    brake_error = (
+        joined.loc[brake_mask, "predicted_delta_braking_onset_from_complex_start_m"]
+        - joined.loc[brake_mask, "delta_braking_onset_from_complex_start_m"]
+    )
     lap_rows = joined.groupby("lap_slug", sort=True).agg(
         actual=("delta_phase_time_s", "sum"),
         predicted=("predicted_delta_phase_time_s", "sum"),
@@ -1303,10 +1312,11 @@ def score_fold(test: pd.DataFrame, prediction: pd.DataFrame, baseline: pd.DataFr
     )
     lap_errors = (lap_rows.predicted - lap_rows.actual).to_dict()
     baseline_lap_errors = (baseline_laps.predicted - baseline_laps.actual).to_dict()
-    sector_errors = joined.groupby("sector").apply(
-        lambda group: float(group.predicted_delta_phase_time_s.sum() - group.delta_phase_time_s.sum()),
-        include_groups=False,
-    ) if "sector" in joined else pd.Series([lap_predicted - lap_actual])
+    sector_rows = joined.groupby(["lap_slug", "sector"], sort=True).agg(
+        actual=("delta_phase_time_s", "sum"),
+        predicted=("predicted_delta_phase_time_s", "sum"),
+    )
+    sector_errors = sector_rows.predicted - sector_rows.actual
     archetype_bias = joined.assign(error=phase_error).groupby("archetype").error.mean()
     covered = (
         (joined.delta_phase_time_s >= joined.lower80_delta_phase_time_s)
@@ -1545,6 +1555,7 @@ def nearest_analogues(spa_phase: pd.Series, candidates: pd.DataFrame, k: int = 5
 # calibration/src/spa_calibration/spa_predictor.py
 from dataclasses import dataclass
 from collections import defaultdict
+import itertools
 
 
 @dataclass(frozen=True)
@@ -1565,6 +1576,8 @@ class AttemptEvidence:
     driver_acronym: str
     draw: int
     attempt: int
+    lap_time_s: float
+    sectors_s: tuple[float, float, float]
     trace: pd.DataFrame
     timing_table: list[dict[str, float]]
 
@@ -1666,10 +1679,14 @@ def build_analogue_evidence(spa_features: pd.DataFrame, training_features: pd.Da
     return evidence
 
 def sector_times(trace: pd.DataFrame) -> tuple[float, float, float]:
-    values = []
-    for sector in (1, 2, 3):
-        rows = trace[trace.sector == sector]
-        values.append(float(rows.elapsed_s.iloc[-1] - rows.elapsed_s.iloc[0]))
+    elapsed = trace.elapsed_s.to_numpy(float)
+    sectors = trace.sector.to_numpy(int)
+    segment_dt = np.diff(elapsed)
+    if len(segment_dt) != len(sectors) - 1 or np.any(segment_dt < 0):
+        raise ValueError("invalid trace timeline")
+    values = [float(segment_dt[sectors[:-1] == sector].sum()) for sector in (1, 2, 3)]
+    if not np.isclose(sum(values), float(elapsed[-1]), atol=1e-9):
+        raise ValueError("sector times do not sum to lap time")
     return tuple(values)
 
 
@@ -1709,9 +1726,10 @@ def predict_spa_team(
                 time=lambda frame: frame.elapsed_s / frame.elapsed_s.iloc[-1]
             )[["progress", "time"]].to_dict(orient="records")
             evidence[(profile_id, draw_index, attempt)] = AttemptEvidence(
-                profile_id, team_name, driver_acronym, draw_index, attempt, attempt_solution.trace.copy(), timing
+                profile_id, team_name, driver_acronym, draw_index, attempt,
+                attempt_solution.lap_time_s, sector_times(attempt_solution.trace),
+                attempt_solution.trace.copy(), timing
             )
-        traces[draw_index] = solution.trace
     return samples, evidence
 
 
@@ -1748,24 +1766,39 @@ def browser_trace_rows(trace: pd.DataFrame) -> list[dict[str, object]]:
 def summarize_team_prediction(
     team_name: str,
     samples: list[TeamLapSample],
-    traces: dict[int, pd.DataFrame],
+    evidence: dict[tuple[str, int, int], AttemptEvidence],
 ) -> dict[str, object]:
-    lap_times = np.asarray([row.lap_time_s for row in samples], dtype=float)
-    representative = samples[int(np.argmin(np.abs(lap_times - np.median(lap_times))))]
-    trace = traces[representative.draw]
+    best_by_profile_draw = {
+        (profile_id, draw): min(rows, key=lambda row: row.lap_time_s)
+        for (profile_id, draw), rows in itertools.groupby(
+            sorted(samples, key=lambda row: (row.profile_id, row.draw, row.lap_time_s)),
+            key=lambda row: (row.profile_id, row.draw),
+        )
+    }
+    best_samples = list(best_by_profile_draw.values())
+    lap_times = np.asarray([row.lap_time_s for row in best_samples], dtype=float)
+    representative = best_samples[int(np.argmin(np.abs(lap_times - np.median(lap_times))))]
+    representative_evidence = evidence[(representative.profile_id, representative.draw, representative.attempt)]
+    if representative_evidence.lap_time_s != representative.lap_time_s or representative_evidence.sectors_s != representative.sectors_s:
+        raise ValueError("team sample and attempt evidence disagree")
+    trace = representative_evidence.trace
     return {
         "slug": team_name.lower().replace(" ", "-"),
         "teamName": team_name,
-        "supported": team_is_supported(samples),
+        "supported": team_is_supported(best_samples),
         "lapTimeSeconds": {
             "lower80": float(np.quantile(lap_times, .1)),
             "median": float(np.quantile(lap_times, .5)),
             "upper80": float(np.quantile(lap_times, .9)),
         },
         "trace": browser_trace_rows(trace),
-        "timingTable": trace[["progress", "elapsed_s"]].assign(time=lambda frame: frame.elapsed_s / frame.elapsed_s.iloc[-1])[["progress", "time"]].to_dict(orient="records"),
+        "timingTable": representative_evidence.timing_table,
         "disclosure": "Team-level prediction is shown only when posterior support and interval width pass stability checks.",
-        "provenance": {"representativeDraw": representative.draw},
+        "provenance": {
+            "representativeProfile": representative.profile_id,
+            "representativeDraw": representative.draw,
+            "representativeAttempt": representative.attempt,
+        },
     }
 
 
@@ -1950,7 +1983,15 @@ def complete_provenance_fixture() -> dict[str, object]:
             "eligibility": "5" * 64,
         },
         "codeCommit": "1" * 40,
-        "scenario": {"id": "spa-2026-dry-qualifying-reference/v1", "attempts": 2},
+        "scenario": {"id": "spa-2026-dry-qualifying-reference/v1", "attempts": 2, "distributions": {
+            "trackTemperatureC": {"family": "normal", "mean": 32, "sd": 4},
+            "ambientTemperatureC": {"family": "normal", "mean": 21, "sd": 3},
+            "pressureHpa": {"family": "normal", "mean": 1013, "sd": 8},
+            "airDensityKgM3": {"family": "normal", "mean": 1.18, "sd": 0.04},
+            "windSpeedMs": {"family": "weibull", "shape": 2, "scale": 4},
+            "windDirectionDeg": {"family": "circular-uniform", "lower": 0, "upper": 360},
+            "gripEvolution": {"family": "beta", "alpha": 3, "beta": 2},
+        }},
     }
 
 
@@ -2095,14 +2136,21 @@ def validate_ordered_prediction_intervals(artifact: dict[str, object]) -> None:
     if values != sorted(values):
         raise ValueError("prediction intervals are not ordered")
 
-def validate_scenario_and_cutoff_freshness(artifact: dict[str, object]) -> None:
+def validate_scenario_and_cutoff_freshness(artifact: dict[str, object], *, now: datetime) -> None:
     scenario = artifact.get("provenance", {}).get("scenario", {})
+    required_distributions = {
+        "trackTemperatureC", "ambientTemperatureC", "pressureHpa",
+        "airDensityKgM3", "windSpeedMs", "windDirectionDeg", "gripEvolution",
+    }
     if scenario.get("id") != "spa-2026-dry-qualifying-reference/v1" or scenario.get("attempts") != 2:
         raise ValueError("unsupported Spa prediction scenario")
+    distributions = scenario.get("distributions")
+    if not isinstance(distributions, dict) or set(distributions) != required_distributions:
+        raise ValueError("Spa prediction scenario requires complete condition distributions")
     generated = datetime.fromisoformat(str(artifact["generatedAt"]))
     cutoff = datetime.fromisoformat(str(artifact["sourceCutoff"]))
-    if generated < cutoff:
-        raise ValueError("artifact predates source cutoff")
+    if not (cutoff <= generated <= now):
+        raise ValueError("artifact chronology is invalid")
 
 
 
@@ -2122,6 +2170,25 @@ def _checksum(payload: dict[str, object]) -> str:
     return sha256(orjson.dumps(clean, option=orjson.OPT_SORT_KEYS)).hexdigest()
 
 
+
+def validate_released_prediction_sources(artifact: dict[str, object]) -> None:
+    sources = [("fieldBest", artifact.get("fieldBest"))] + [
+        (f"teams[{index}]", row) for index, row in enumerate(artifact.get("teams", []))
+    ]
+    for label, source in sources:
+        trace = source.get("trace") if isinstance(source, dict) else None
+        timing = source.get("timingTable") if isinstance(source, dict) else None
+        if not isinstance(trace, list) or not isinstance(timing, list) or len(trace) < 2 or len(trace) != len(timing):
+            raise ValueError(f"{label} requires matching trace and timing rows")
+        duration = float(trace[-1]["elapsedSeconds"])
+        if not np.isfinite(duration) or duration <= 0:
+            raise ValueError(f"{label} trace duration must be positive")
+        for trace_row, timing_row in zip(trace, timing, strict=True):
+            if trace_row["progress"] != timing_row["progress"]:
+                raise ValueError(f"{label} trace/timing progress mismatch")
+            if not np.isclose(float(trace_row["elapsedSeconds"]) / duration, float(timing_row["time"]), atol=1e-9):
+                raise ValueError(f"{label} timing does not match trace")
+
 def validate_prediction_semantics(
     artifact: dict[str, object], *, now: datetime, maximum_age_hours: float = 24 * 7,
 ) -> None:
@@ -2140,7 +2207,8 @@ def validate_prediction_semantics(
     validate_release_reports(artifact.get("validation", {}))
     validate_release_provenance(artifact.get("provenance", {}))
     validate_ordered_prediction_intervals(artifact)
-    validate_scenario_and_cutoff_freshness(artifact)
+    validate_scenario_and_cutoff_freshness(artifact, now=now)
+    validate_released_prediction_sources(artifact)
     generated = datetime.fromisoformat(str(artifact["generatedAt"]))
     if (now - generated).total_seconds() > maximum_age_hours * 3600:
         raise ValueError("prediction artifact is stale")
@@ -2172,8 +2240,13 @@ def validate_prediction_artifact(artifact: dict[str, object], *, now: datetime |
     now = now or datetime.now(UTC)
     if artifact.get("schemaVersion") != SCHEMA_VERSION:
         raise ValueError("unsupported prediction schema")
+    status = artifact.get("status")
+    checksum = artifact.get("checksum")
+    if status == "pending" and checksum is None:
+        validate_prediction_semantics(artifact, now=now)
+        return artifact
     actual = _checksum(artifact)
-    if artifact.get("checksum") != actual:
+    if checksum != actual:
         raise ValueError("prediction checksum mismatch")
     validate_prediction_semantics(artifact, now=now)
     return artifact

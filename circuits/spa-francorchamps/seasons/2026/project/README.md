@@ -14,7 +14,7 @@ This directory is the durable control surface for the Spa 2026 Race Lab initiati
 - `ACTIVITY.md` is append-only history. It records attempts, partial loops, failures, verification, commits, pushes, and remote actions. Existing entries are never rewritten; corrections are appended.
 - `DECISIONS.md` records load-bearing decisions, rationale, rejected alternatives, affected interfaces, and reversal conditions.
 - `LESSONS.md` records frictions and mistakes, systemic causes, consequences, enforceable guardrails, and evidence that the guardrails work.
-- `../plans/2026-07-15-pr1-closeout-plan.md` is the active closeout plan. Stable task IDs are the interface between the plan and `STATUS.md`.
+- `../plans/2026-07-15-pr1-closeout-plan.md` is the active closeout plan. Stable task IDs are the interface between the plan and `STATUS.md`. Closeout task IDs may use one uppercase suffix (for example `PR-03C`) when a parent gate is split without renumbering historical tasks.
 
 ## Start-of-session procedure
 

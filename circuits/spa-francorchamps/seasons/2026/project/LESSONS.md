@@ -185,3 +185,18 @@ initiative: spa-2026-calibration
 **Enforceable guardrail:** every review correction must name its producer/consumer chain and add a focused cross-contract assertion or fixture that fails when either side drifts. The pre-publication audit must enumerate every touched interface and verify all producers and consumers together.
 
 **Check:** the `POSTFINAL-01` through `POSTFINAL-13` reconciliation ledger records each chain; the independent cross-contract audit and fenced-snippet sweep are mandatory publication gates.
+
+
+## L-014 — Active — Cross-runtime release predicates require executable parity fixtures
+
+**Friction:** repeated reviews found that Python, browser, generated-module, and planning fixtures each enforced only a subset of the same release contract, allowing malformed artifacts or unreachable GREEN tests.
+
+**Systemic cause:** shared invariants were duplicated as prose and snippets without a horizontal parity checklist covering provenance digests, scenario distributions, chronology, source traces, pending checksums, and the actual browser ingestion boundary.
+
+**Consequence:** one runtime could accept evidence another rejected, and tests could intercept a raw JSON path that production never consumed.
+
+**Guardrail:** every release-contract change must enumerate and reconcile the Python validator, browser validator, artifact builder, generated module, positive/negative fixtures, CLI, and browser test injection path.
+
+**Enforcement:** the rereview ledger records the producer/consumer chain for each finding; canonical verification checks fenced syntax; targeted scope audits search all named consumers before publication.
+
+**Evidence of effectiveness:** pending completion and exact-head verification of `REREVIEW-01` through `REREVIEW-15`.

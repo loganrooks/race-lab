@@ -352,3 +352,45 @@ lessons_reviewed: no-new-lesson
 **Lessons review:** no-new-lesson; `L-013` already captures the cross-snippet producer/consumer failure mode, and this action-only synchronization introduced no new reusable technical lesson.
 
 lessons_reviewed: no-new-lesson
+
+
+## A-018 — 2026-07-17T10:41:26Z — Bootstrap and evaluate final rereview findings
+
+**Evidence status:** handoff locally verified; remote starting state remotely observed and CI-confirmed; 15 findings reviewed; local correction in progress and unpublished.
+
+**Starting state:** the authoritative handoff bundle verified at `bb67dbdbb6e4064cffd23c777cc409cffbfe6d73`; `BOOTSTRAP.sh` produced clean branch `handoff-work`. PR #1 was open and unmerged at the same exact head. Verify run `29530354638`, job `87728914740`, succeeded. The latest Codex review against `bb67dbdbb6` had exactly 15 unresolved threads. The archive branch compared identical to `b105df73de22059161959673d110e31cb2177daa`.
+
+**Work performed:** read the maintenance and living records, closeout plan, and reconciliation ledger; inspected every current review thread; classified `REREVIEW-01` through `REREVIEW-15`; traced producer/consumer contracts across data, model, browser, validation, test, and project-control snippets; wrote the suffixed-task regression first and observed the expected RED failure; implemented the minimal parser correction and observed GREEN; began the bounded planning-only corrections.
+
+**Files changed:** the three implementation plans, `project/README.md`, `scripts/verify_project_control.py`, `tests/test_project_control.py`, `project/STATUS.md`, this activity log, `project/LESSONS.md`, the closeout plan, and the reconciliation ledger. No production calibration implementation file changed.
+
+**Verification:** handoff checksums and bundle verification passed; exact checkout/branch/clean-state assertions passed before editing; focused parser regression failed for the intended unknown-task reason and then passed after the correction. Complete verification remains pending.
+
+**Publication / remote actions:** none. Direct Git transport failed only because this runtime could not resolve `github.com`; no branch, comment, reaction, thread, review request, or merge mutation was made.
+
+**Result:** all 15 current findings are accepted or accepted with modification and have one coherent correction unit in progress against the exact reviewed parent.
+
+**Next action:** finish record synchronization and contract corrections, run the full required verification and recovery-artifact checks, commit once, publish atomically, require exact-head CI, and then perform/read back 15/15 reactions, replies, and resolutions.
+
+**Lessons review:** new lesson `L-014` recorded.
+
+
+## A-019 — 2026-07-17T10:46:52Z — Verify final 15-finding rereview correction
+
+**Evidence status:** locally verified against the authoritative bundle checkout; uncommitted and unpublished; live PR, CI, review, and archive starting state remotely observed.
+
+**Starting state:** the handoff verified and bootstrapped `handoff-work` at exact clean head `bb67dbdbb6e4064cffd23c777cc409cffbfe6d73`. PR #1 was open and unmerged at that exact head; Verify run `29530354638`, job `87728914740`, succeeded; the latest Codex review against `bb67dbdbb6` contained exactly 15 unresolved findings; and `archive/spa-pr1-worker-evidence` matched `b105df73de22059161959673d110e31cb2177daa`. Direct Git transport could not resolve `github.com`, while authenticated connector operations remained available.
+
+**Work performed:** evaluated all 15 findings as technical claims before editing; classified each as accepted or accepted with modification; added the suffixed-task regression and observed the expected RED before the parser correction; reconciled producer/consumer contracts across the data, model, app, project-control, closeout, and review-ledger documents; synchronized stale status records; and preserved planning-only scope. `DECISIONS.md` was reviewed and remained unchanged because no approved architecture or release contract changed.
+
+**Files changed:** the three Spa implementation plans; PR #1 closeout plan; `project/STATUS.md`, `project/ACTIVITY.md`, `project/LESSONS.md`, and maintenance `README.md`; the plan-reconciliation ledger; `scripts/verify_project_control.py`; and `tests/test_project_control.py`. No production calibration implementation, specification, generated prediction, or application artifact was added.
+
+**Verification:** `python3 -m unittest tests/test_project_control.py -v` passed 10/10; `python3 scripts/verify_project_control.py` passed; `git diff --check` passed; and `bash scripts/verify.sh` passed, validating 14 canonical files, five plan paths, project controls, Python tests, and Node syntax (Ruff and ShellCheck unavailable and explicitly skipped). An independent fenced-snippet sweep compiled/checked all 74 Python/JavaScript blocks in the three edited implementation plans with zero syntax failures. Producer/consumer auditing confirmed all 15 REREVIEW chains, Python/browser scenario and provenance parity, exact sampled-attempt evidence, best-of-two team aggregation, coherent lap/sector scoring, safe pending semantics, generated-module fixture injection, no truncation (plan size ratios 1.005–1.043), the exact 11-file planning/control scope, and continued suppression of `1:40.4`. Current diff stat before this record update was 259 insertions and 63 deletions across 11 files.
+
+**Publication / remote actions:** none. No branch ref, archive ref, reaction, reply, resolution, review request, or merge has been changed.
+
+**Result:** the bounded correction is locally verified and ready for one exact-parent commit plus deterministic recovery/publication artifacts.
+
+**Next action:** rerun the required suite after this record update, create the sole-parent local commit, record its manifest/blobs/patch, then publish atomically only if PR and archive heads remain unchanged.
+
+**Lessons review:** new lesson `L-014` records the stale completed-task/status mismatch exposed by the strengthened task-ID parser.

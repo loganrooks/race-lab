@@ -64,7 +64,7 @@ ID_PATTERNS = {
     "activity": re.compile(r"^## (A-\d{3}) — ([^—\n]+) — ", re.MULTILINE),
     "decision": re.compile(r"^## (D-\d{3}) — ", re.MULTILINE),
     "lesson": re.compile(r"^## (L-\d{3}) — ", re.MULTILINE),
-    "task": re.compile(r"^### ([A-Z]+-\d{2}) — ", re.MULTILINE),
+    "task": re.compile(r"^### ([A-Z]+-\d{2}[A-Z]?) — ", re.MULTILINE),
 }
 
 

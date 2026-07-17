@@ -136,7 +136,15 @@ function releasedFixture(overrides = {}) {
       randomSeed: 7, regulationIdentifiers: ['2026'], hyperparameters: {},
       trainingCircuits: ['silverstone'], heldOutCircuits: ['spa'],
       validationReportChecksums: Object.fromEntries(REPORT_NAMES.map((name) => [name, 'a'.repeat(64)])), codeCommit: 'a'.repeat(40),
-      scenario: { id: 'spa-2026-dry-qualifying-reference/v1', attempts: 2 }
+      scenario: { id: 'spa-2026-dry-qualifying-reference/v1', attempts: 2, distributions: {
+        trackTemperatureC: { family: 'normal', mean: 32, sd: 4 },
+        ambientTemperatureC: { family: 'normal', mean: 21, sd: 3 },
+        pressureHpa: { family: 'normal', mean: 1013, sd: 8 },
+        airDensityKgM3: { family: 'normal', mean: 1.18, sd: 0.04 },
+        windSpeedMs: { family: 'weibull', shape: 2, scale: 4 },
+        windDirectionDeg: { family: 'circular-uniform', lower: 0, upper: 360 },
+        gripEvolution: { family: 'beta', alpha: 3, beta: 2 }
+      } }
     },
     checksum: 'a'.repeat(64),
     ...overrides,
@@ -251,10 +259,12 @@ function validatePredictionSource(source, label, intervalKeys) {
   validateTraceRows(source.trace, `${label}.trace`);
   validateTimingTable(source.timingTable, `${label}.timingTable`);
   if (source.trace.length !== source.timingTable.length) throw new TypeError(`${label} trace/timing row count mismatch`);
+  const duration = source.trace.at(-1).elapsedSeconds;
+  if (!(duration > 0)) throw new TypeError(`${label} trace duration must be positive`);
   source.trace.forEach((row, index) => {
     if (row.progress !== source.timingTable[index].progress) throw new TypeError(`${label} trace/timing progress mismatch`);
-    const fraction = row.elapsedSeconds / source.trace.at(-1).elapsedSeconds;
-    if (Math.abs(fraction - source.timingTable[index].time) > 1e-9) throw new TypeError(`${label} timing does not match trace elapsed fraction`);
+    const fraction = row.elapsedSeconds / duration;
+    if (!Number.isFinite(fraction) || Math.abs(fraction - source.timingTable[index].time) > 1e-9) throw new TypeError(`${label} timing does not match trace elapsed fraction`);
   });
 }
 
@@ -276,11 +286,31 @@ function validateRequiredProvenance(provenance) {
   for (const name of REQUIRED_PROVENANCE) {
     if (provenance?.[name] === undefined || provenance?.[name] === null) throw new TypeError(`Missing release provenance: ${name}`);
   }
+  const checksumFields = ['trainingManifestChecksum', 'sourceEligibilityChecksum', 'circuitYearEligibilityChecksum', 'scenarioChecksum'];
+  for (const name of checksumFields) {
+    if (!/^[0-9a-f]{64}$/.test(provenance[name])) throw new TypeError(`Invalid release provenance digest: ${name}`);
+  }
+  const reportChecksums = provenance.validationReportChecksums;
+  if (!reportChecksums || new Set(Object.keys(reportChecksums)).size !== REQUIRED_REPORTS.length || Object.keys(reportChecksums).some((name) => !REQUIRED_REPORTS.includes(name))) {
+    throw new TypeError('Validation report checksum coverage must exactly match required reports');
+  }
+  for (const [name, digest] of Object.entries(reportChecksums)) {
+    if (!/^[0-9a-f]{64}$/.test(digest)) throw new TypeError(`Invalid validation report digest: ${name}`);
+  }
 }
 
 function validateScenario(scenario) {
+  const requiredDistributions = [
+    'trackTemperatureC', 'ambientTemperatureC', 'pressureHpa', 'airDensityKgM3',
+    'windSpeedMs', 'windDirectionDeg', 'gripEvolution',
+  ];
   if (scenario?.id !== 'spa-2026-dry-qualifying-reference/v1' || scenario?.attempts !== 2) {
     throw new TypeError('Unsupported Spa prediction scenario');
+  }
+  const distributions = scenario?.distributions;
+  if (!distributions || Object.keys(distributions).length !== requiredDistributions.length
+      || requiredDistributions.some((name) => !distributions[name])) {
+    throw new TypeError('Spa prediction scenario requires complete condition distributions');
   }
 }
 
@@ -921,8 +951,9 @@ git commit -m "feat(app): visualize lap traces and uncertainty"
 ```javascript
 // tests/helpers/load-released-calibration-fixture.js
 export async function loadReleasedCalibrationFixture(page, fixture = releasedCalibrationFixture()) {
-  await page.route('**/calibration/artifacts/predictions/spa-2026-prediction-v1.json', async (route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fixture) });
+  const generatedModule = `export const CALIBRATION_ARTIFACT = ${JSON.stringify(fixture)};`;
+  await page.route('**/js/calibration-data.js', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'text/javascript', body: generatedModule });
   });
   await page.goto('/');
   await page.waitForFunction(() => window.__RACE_LAB__?.calibration?.status === 'released');

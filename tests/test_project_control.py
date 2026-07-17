@@ -131,6 +131,14 @@ initiative: spa-2026-calibration
         root = self.make_project()
         validator.validate_project(root, changed_files=[])
 
+    def test_suffixed_closeout_task_id_is_recognized(self) -> None:
+        root = self.make_project()
+        plan = root / "circuits/spa-francorchamps/seasons/2026/plans/2026-07-15-pr1-closeout-plan.md"
+        plan.write_text(plan.read_text().replace("TASK-01", "PR-03A"))
+        status = root / "circuits/spa-francorchamps/seasons/2026/project/STATUS.md"
+        status.write_text(status.read_text().replace("TASK-01", "PR-03A"))
+        validator.validate_project(root, changed_files=[])
+
     def test_active_task_must_exist_and_be_incomplete(self) -> None:
         root = self.make_project()
         status = root / "circuits/spa-francorchamps/seasons/2026/project/STATUS.md"
