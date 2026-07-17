@@ -2,7 +2,12 @@
 
 ## Status
 
-Approved design for review. This specification replaces direct tuning of the Spa simulation to a remembered or historical pole time. The displayed 2026 Spa prediction must be generated only after the calibration and validation pipeline defined here passes its release gates.
+Approved for implementation planning. This specification replaces direct tuning of the Spa simulation to a remembered or historical pole time. The displayed 2026 Spa prediction must be generated only after the calibration and validation pipeline defined here passes its release gates.
+
+## Review record
+
+- [Implementation-planning recommendations](../reviews/2026-07-15-calibration-review-recommendations.md)
+- [Defence before the expert panel](../reviews/2026-07-15-calibration-review-defence.md)
 
 ## Goal
 

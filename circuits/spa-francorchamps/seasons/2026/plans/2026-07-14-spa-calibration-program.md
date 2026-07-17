@@ -21,13 +21,55 @@
 - All data refreshes are explicit CLI operations; tests use frozen, auditable fixtures and never depend on live APIs.
 - No new runtime dependency is added to the browser app.
 
+
+## Reconciled Programme Contract — 2026-07-15
+
+This section is normative and supersedes any less-specific wording or illustrative snippet later in the four-plan package.
+
+### Prediction estimand and Spa scenario
+
+The primary estimand is **the distribution of the best clean dry qualifying lap achievable by each supported 2026 car-driver profile under the declared Spa reference scenario**. It is not an expected actual pole, not a theoretical unconstrained minimum, and not the best of independently selected sectors. Each profile distribution represents the best of **two independent representative push attempts** after one preparation lap; attempt-level execution variation is sampled within profile. The field-best distribution is the draw-wise minimum across complete, coherent profile attempts.
+
+The release scenario is versioned as `spa-2026-dry-qualifying-reference/v1` and fixes: soft-compound new-tyre state; qualifying fuel and legal operating state; dry track; no traffic, tow, yellow flag, or interruption; DRS/active-aero/ERS operation only where legal and physically feasible. Track temperature, ambient temperature, pressure/air density, wind vector, and grip evolution are sampled from declared pre-event scenario distributions. The artifact must contain those distributions and the scenario checksum. A separate expected-session-pole model is explicitly out of scope.
+
+### Release eligibility
+
+`released` requires the conjunction of all of the following, evaluated by one shared validator used by the model, CLI, browser generator, and browser runtime:
+
+1. source and circuit-year eligibility manifests pass;
+2. leave-one-circuit-out geometric-transfer gates pass;
+3. rolling-origin temporal-forecast gates pass;
+4. point-estimate gates pass per coherent lap/profile;
+5. 80% and 95% interval coverage, weighted interval score, and CRPS gates pass at supported granularities;
+6. required baselines are outperformed and ablations justify retained complexity;
+7. identifiability and profile-support rules pass;
+8. every sampled trajectory passes physical, ERS, geometry, and convergence checks;
+9. complete provenance and checksums validate.
+
+Failure of any required gate yields `failed-validation` or `pending`; it never yields a partially released central estimate. The provisional `1:40.4` value remains suppressed.
+
+### Empirical-to-physics contract
+
+The hierarchical model emits a **joint correction draw** with named correction families. Each observed effect has exactly one owner:
+
+- effective-envelope corrections alter bounded physical capacities before solving;
+- control-landmark corrections alter braking/throttle constraints or objective penalties;
+- phase-duration residuals may be used only for validation diagnostics in v1 and are not added to the released lap time;
+- direct output-channel residuals are prohibited in a released coupled trace.
+
+A correction ledger records family, units, source outcome, solver target, and application count. Duplicate ownership or application count other than one is a release failure. Each uncertainty draw is solved and re-optimized as one joint trajectory.
+
+### Validation and evidence outputs
+
+Plan A additionally produces source-feasibility, circuit-year eligibility, raw-coverage, and selection-fallback manifests. Plan B additionally produces rolling-origin, uncertainty-calibration, baseline, ablation, identifiability, and physical-feasibility reports. Plan C consumes only artifacts accepted by the shared release validator.
+
 ---
 
 ## Execution Order
 
 ### Plan A — Data and feature pipeline
 
-File: `docs/superpowers/plans/2026-07-14-spa-calibration-data-pipeline.md`
+File: `circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-data-pipeline.md`
 
 Produces:
 
@@ -37,13 +79,16 @@ calibration/data/processed/aligned-traces.parquet
 calibration/data/processed/phases.parquet
 calibration/data/processed/features.parquet
 calibration/data/processed/provenance.json
+calibration/manifests/source-eligibility.json
+calibration/manifests/circuit-year-eligibility.json
+calibration/manifests/lap-selection.json
 ```
 
 The output schemas are versioned as `spa-calibration-corpus/v1` and are the only supported inputs to Plan B.
 
 ### Plan B — Calibration, validation, and Spa prediction
 
-File: `docs/superpowers/plans/2026-07-14-spa-calibration-model-prediction.md`
+File: `circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-model-prediction.md`
 
 Consumes Plan A outputs and produces:
 
@@ -51,6 +96,10 @@ Consumes Plan A outputs and produces:
 calibration/artifacts/model/inference-data.nc
 calibration/artifacts/model/model-summary.json
 calibration/artifacts/validation/loco-results.json
+calibration/artifacts/validation/rolling-origin-results.json
+calibration/artifacts/validation/uncertainty-calibration.json
+calibration/artifacts/validation/baselines-ablations.json
+calibration/artifacts/validation/identifiability.json
 calibration/artifacts/predictions/spa-2026-prediction-v1.json
 ```
 
@@ -58,7 +107,7 @@ The final prediction artifact may set `status: "released"` only when the validat
 
 ### Plan C — Browser artifact and UI integration
 
-File: `docs/superpowers/plans/2026-07-14-spa-calibration-app-integration.md`
+File: `circuits/spa-francorchamps/seasons/2026/plans/2026-07-14-spa-calibration-app-integration.md`
 
 Consumes the Plan B prediction artifact and produces:
 
