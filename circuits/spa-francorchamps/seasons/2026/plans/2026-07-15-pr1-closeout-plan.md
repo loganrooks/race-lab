@@ -152,22 +152,22 @@ Each completed row records a technical disposition and a bounded correction in t
 ## Active publication and closeout gates
 
 ### PR-01 — Publish atomic correction
-- [ ] Refresh PR #1 and require exact head `76b8226e0e4365bf757300972174e5fe28319f1c`.
-- [ ] Rerun complete local verification and verify exactly twelve intended files.
-- [ ] Create one commit whose sole parent is the exact head and fast-forward the PR branch without force.
-- [ ] Read back the commit, exact changed files, tree, and diff statistics.
-- [ ] Require a successful retrievable `Verify` run for the exact correction SHA.
+- [x] Refresh PR #1 and require exact head `76b8226e0e4365bf757300972174e5fe28319f1c`.
+- [x] Rerun complete local verification and verify exactly twelve intended files.
+- [x] Create one commit whose sole parent is the exact head and fast-forward the PR branch without force.
+- [x] Read back the commit, exact changed files, tree, and diff statistics.
+- [x] Require a successful retrievable `Verify` run for the exact correction SHA.
 
 ### PR-02 — Complete 22-thread action sweep
-- [ ] Refresh the complete same-head inventory.
-- [ ] Apply missing positive reactions only after technical evaluation.
-- [ ] Post one specific inline reply per final finding with correction SHA and Verify evidence.
-- [ ] Resolve each completed thread and refresh the inventory.
+- [x] Refresh the complete same-head inventory.
+- [x] Apply missing positive reactions only after technical evaluation.
+- [x] Post one specific inline reply per final finding with correction SHA and Verify evidence.
+- [x] Resolve each completed thread and refresh the inventory.
 
 ### PR-03 — Synchronize evidence and request one final review
-- [ ] Publish only the minimal living-record evidence update required by observed remote actions.
-- [ ] Obtain exact-head CI for that evidence commit.
-- [ ] Request exactly one fresh Codex review on the stable head.
+- [x] Publish only the minimal living-record evidence update required by observed remote actions.
+- [x] Obtain exact-head CI for that evidence commit.
+- [x] Request exactly one fresh Codex review on the stable head.
 
 ### PR-04 — Merge and hand off
 - [ ] Confirm no valid blocking findings remain and CI is green.
@@ -194,17 +194,26 @@ Closeout is complete only when all 22 rows are published and individually accoun
 ### PR-03B — Synchronize POSTFINAL actions and request final re-review
 
 - [x] Read back 13 authenticated positive reactions, exact inline replies, resolved POSTFINAL threads, and zero unresolved threads.
-- [ ] Publish exactly four administrative record files, parented to material correction head `5b504c2ccbe2fe8b077db3b2bf22cfa9fde9423c`.
-- [ ] Read back the administrative PR head and exact four-file scope.
-- [ ] Require successful exact-head `Verify` for the administrative head.
-- [ ] Post exactly one final independent `@codex review` request and record its comment ID.
-- [ ] Stop without merging; merge remains blocked pending evaluation of the fresh review.
+- [x] Publish exactly four administrative record files, parented to material correction head `5b504c2ccbe2fe8b077db3b2bf22cfa9fde9423c`.
+- [x] Read back the administrative PR head and exact four-file scope.
+- [x] Require successful exact-head `Verify` for the administrative head.
+- [x] Post exactly one final independent `@codex review` request and record its comment ID.
+- [x] Stop without merging; merge remains blocked pending evaluation of the fresh review.
 
 
 ### PR-03C — Complete 15-finding final rereview action sweep
 
-- [ ] Classify and correct `REREVIEW-01` through `REREVIEW-15` against exact parent `bb67dbdbb6e4064cffd23c777cc409cffbfe6d73`.
-- [ ] Publish one coherent fast-forward correction only after local verification and exact candidate parity.
-- [ ] Require exact-head Verify success before any review mutation.
-- [ ] Apply and read back 15/15 authenticated `+1` reactions, 15/15 inline technical replies, and 15/15 resolutions.
-- [ ] Require unresolved-thread count `0`; do not request another review and do not merge.
+- [x] Classify and correct `REREVIEW-01` through `REREVIEW-15` against exact parent `bb67dbdbb6e4064cffd23c777cc409cffbfe6d73`.
+- [x] Publish one coherent fast-forward correction only after local verification and exact candidate parity.
+- [x] Require exact-head Verify success before any review mutation.
+- [x] Apply and read back 15/15 authenticated `+1` reactions, 15/15 inline technical replies, and 15/15 resolutions.
+- [x] Require unresolved-thread count `0`; do not request another review and do not merge.
+
+
+### PR-03D — Synchronize REREVIEW evidence and request final review
+
+- [ ] Publish exactly four record/control files with sole parent `a24c8c83461c5e1a627e8ecbb5aab9bdf9b8fecb`.
+- [ ] Read back the exact four-file scope and require successful exact-head `Verify`.
+- [ ] Post exactly one independent `@codex review` request against the stable synchronized head.
+- [ ] Evaluate the complete review submission and every new or unresolved thread before any merge decision.
+- [ ] Stop without merging; `PR-04` remains a separate explicitly authorized task.

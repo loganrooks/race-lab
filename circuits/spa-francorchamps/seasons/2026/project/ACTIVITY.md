@@ -394,3 +394,24 @@ lessons_reviewed: no-new-lesson
 **Next action:** rerun the required suite after this record update, create the sole-parent local commit, record its manifest/blobs/patch, then publish atomically only if PR and archive heads remain unchanged.
 
 **Lessons review:** new lesson `L-014` records the stale completed-task/status mismatch exposed by the strengthened task-ID parser.
+
+
+## A-020 — 2026-07-17T12:16:19Z — Reconcile published rereview state before final review
+
+**Evidence status:** material correction committed, pushed, remotely observed, and CI-confirmed; inline replies and resolutions remotely observed; positive-reaction count reported by the executor but not independently enumerable through the current connector; record synchronization locally prepared and unpublished.
+
+**Starting state:** PR #1 was open, unmerged, and mergeable at exact head `a24c8c83461c5e1a627e8ecbb5aab9bdf9b8fecb`. That commit was one commit after `bb67dbdbb6e4064cffd23c777cc409cffbfe6d73`, changed exactly 11 files with 280 insertions and 63 deletions, and had successful Verify run `29575395504`, job `87868581094`, including canonical verification. All 15 REREVIEW inline replies were present, all 15 threads read back resolved, and the unresolved count was zero. The archive branch matched `b105df73de22059161959673d110e31cb2177daa`. Durable status, ledger, and closeout checkboxes still described the correction as local and unpublished.
+
+**Work performed:** independently reconciled PR head, commit parent/scope, exact-head CI, archive restoration, and the complete thread inventory; corrected the four living record/control files to distinguish direct observations from executor-reported reaction evidence; marked completed historical publication, action, and rereview gates; and introduced `PR-03D` as the final stable-head review gate.
+
+**Files changed:** `project/STATUS.md`, this append-only activity log, `reviews/2026-07-15-plan-reconciliation.md`, and `plans/2026-07-15-pr1-closeout-plan.md`. No implementation plan, specification, validator, test, production file, decision, or lesson changed.
+
+**Verification:** `python3 -m unittest tests/test_project_control.py -v` passed 10/10; `python3 scripts/verify_project_control.py` passed; `git diff --check` passed; and `bash scripts/verify.sh` passed, validating 14 canonical files, five plan paths, project controls, Python tests, and Node syntax. Ruff and ShellCheck were unavailable and explicitly skipped. The final local scope is exactly four record/control files.
+
+**Publication / remote actions:** this four-file synchronization is not yet committed or pushed. No final review request or merge has been performed.
+
+**Result:** the local records now describe the directly observed material correction and review-action state without claiming that the record-only commit contains its own future SHA.
+
+**Next action:** run the complete verifier, create one record-only commit with sole parent `a24c8c83461c5e1a627e8ecbb5aab9bdf9b8fecb`, fast-forward the PR branch if unchanged, require exact-head Verify, then request exactly one final independent Codex review and stop without merging.
+
+**Lessons review:** no-new-lesson; this update applies `L-002`, `L-007`, `L-008`, `L-013`, and `L-014` without introducing a new systemic guardrail.
